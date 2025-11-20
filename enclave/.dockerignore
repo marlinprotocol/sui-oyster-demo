@@ -1,0 +1,9 @@
+target/
+enclave_key.bin
+enclave_key.pem
+*.pem
+*.bin
+.git
+.gitignore
+README.md
+generate_key.sh

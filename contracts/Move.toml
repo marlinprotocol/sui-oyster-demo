@@ -1,0 +1,9 @@
+[package]
+name = "oyster_demo"
+edition = "2024.beta"
+
+[dependencies]
+enclave = { git = "https://github.com/MystenLabs/nautilus.git", subdir = "move/enclave", rev = "main" }
+
+[addresses]
+oyster_demo = "0x0"
