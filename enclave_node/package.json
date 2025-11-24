@@ -1,0 +1,23 @@
+{
+  "name": "sui-price-oracle-node",
+  "version": "0.1.0",
+  "description": "SUI price oracle enclave server - Node.js implementation",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "keywords": [
+    "sui",
+    "oracle",
+    "enclave"
+  ],
+  "author": "",
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.6.2",
+    "secp256k1": "^5.0.0",
+    "@mysten/bcs": "^1.9.2"
+  }
+}

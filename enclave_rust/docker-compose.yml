@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   sui-price-oracle:
-    image: prored/sui-price-oracle:latest
+    image: prored/sui-price-oracle:rust-latest
     container_name: sui-price-oracle
     restart: unless-stopped
     network_mode: host
