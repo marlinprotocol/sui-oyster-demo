@@ -48,21 +48,23 @@ This project demonstrates how to build a secure price oracle using:
 │   │   └── oyster_demo.move   # Price oracle with attestation verification
 │   ├── script/            # Helper scripts for deployment
 │   │   ├── initialize_oracle.sh
+│   │   ├── register_enclave.sh
 │   │   ├── update_price.sh
+│   │   ├── get_price.sh
 │   │   └── query_enclave.sh
 │   └── README.md          # Contract deployment guide
 │
-├── enclave/               # Rust enclave server
+├── enclave_rust/          # Rust enclave server
 │   ├── src/
 │   │   └── main.rs        # HTTP server with price signing
 │   ├── Dockerfile         # Container for Oyster deployment
 │   ├── docker-compose.yml # Oyster deployment config
 │   └── README.md          # Enclave deployment guide
 │
-├── sui-client/            # Rust SDK utilities (optional)
-│   ├── src/
-│   │   ├── register_enclave.rs
-│   │   └── update_price.rs
+├── enclave_node/          # Node.js enclave implementation (alternative)
+│   └── README.md
+│
+├── enclave_python/        # Python enclave implementation (alternative)
 │   └── README.md
 │
 └── README.md              # This file
@@ -86,10 +88,10 @@ cd contracts
 sui move build
 sui client publish --gas-budget 100000000 --with-unpublished-dependencies
 
-# Save from output:
-# - PACKAGE_ID
-# - ENCLAVE_CONFIG_ID (shared)
-# - CAP_ID (owned)
+# Save these IDs from transaction output:
+# - PACKAGE_ID (in Published Objects)
+# - ENCLAVE_CONFIG_ID (shared object, type: EnclaveConfig)
+# - CAP_ID (owned object, type: Cap)
 ```
 
 See [contracts/README.md](contracts/README.md) for detailed instructions.
@@ -97,10 +99,7 @@ See [contracts/README.md](contracts/README.md) for detailed instructions.
 ### Step 2: Build and Deploy Enclave
 
 ```bash
-cd enclave
-
-# Generate secp256k1 key
-sh generate_secp256k1_key.sh
+cd enclave_rust
 
 # Build Docker image
 docker build -t <your-dockerhub-username>/sui-price-oracle .
@@ -116,7 +115,7 @@ oyster-cvm deploy \
 # Save PUBLIC_IP from output
 ```
 
-See [enclave/README.md](enclave/README.md) for detailed instructions.
+See [enclave_rust/README.md](enclave_rust/README.md) for detailed instructions.
 
 ### Step 3: Register Enclave On-Chain
 
@@ -194,7 +193,7 @@ sh get_price.sh <PUBLIC_IP>
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/health` | GET | Health check |
-| `/public-key` | GET | Get enclave's secp256k1 public key (33 bytes compressed) |
+| `/public-key` | GET | Get enclave's secp256k1 public key (65 bytes uncompressed) |
 | `/price` | GET | Get signed SUI price |
 | `:1301/attestation/hex` | GET | Get attestation document for registration |
 
@@ -244,5 +243,6 @@ sui client call \
 - [Sui Documentation](https://docs.sui.io/)
 - [Nautilus Framework](https://github.com/MystenLabs/nautilus)
 - [Oyster Documentation](https://docs.marlin.org/oyster/)
+- [Oyster CVM CLI](https://docs.marlin.org/oyster/build-cvm/quickstart)
 - [AWS Nitro Enclaves](https://aws.amazon.com/ec2/nitro/nitro-enclaves/)
 - [CoinGecko API](https://www.coingecko.com/en/api)
