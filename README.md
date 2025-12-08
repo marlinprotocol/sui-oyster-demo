@@ -123,6 +123,9 @@ See [enclave_rust/README.md](enclave_rust/README.md) for detailed instructions.
 # Get attestation
 curl http://<PUBLIC_IP>:1301/attestation/hex
 
+# Get PCR values to extract the PCR values from the enclave attestation. Record PCR0, PCR1, and PCR2 for later use.
+oyster-cvm verify --enclave-ip <PUBLIC_IP>
+
 # Update PCRs (after building enclave)
 sui client call \
   --package <ENCLAVE_PACKAGE_ID> \
@@ -142,6 +145,22 @@ sh register_enclave.sh \
   OYSTER_DEMO
 
 # Save ENCLAVE_ID from output
+```
+
+#### Build and verify PCR values against blue images
+
+Install `nix` and `nitro-cli`. Clone the [Oyster Monorepo](https://github.com/marlinprotocol/oyster-monorepo). Checkout `base-blue-v3.0.0` tag and then build the enclave image using nix using commands shown below.
+
+```sh
+# Clone the oyster monorepo
+git clone https://github.com/marlinprotocol/oyster-monorepo.git
+# Checkout base blue v3.0.0 tag
+cd oyster-monorepo && git checkout base-blue-v3.0.0
+# Build the enclave image
+nix build -vL --extra-experimental-features nix-command --extra-experimental-features flakes --accept-flake-config .#default.enclaves.blue.default
+# You can find pcr values at result/pcr.json or
+# Find PCRs of the EIF using nitro-cli
+nitro-cli describe-eif --eif-path result/image.eif
 ```
 
 ### Step 4: Initialize Oracle
