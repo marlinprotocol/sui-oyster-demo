@@ -23,11 +23,25 @@ let
     then pkgs.pkgsStatic.stdenv.cc
     else pkgs.stdenv.cc;
   
+  # Filter source to only include necessary files for reproducibility
+  src = pkgs.lib.cleanSourceWith {
+    src = ./.;
+    filter = path: type:
+      let 
+        baseName = baseNameOf path;
+        parentDir = baseNameOf (dirOf path);
+      in 
+        baseName == "Cargo.toml" ||
+        baseName == "Cargo.lock" ||
+        baseName == "src" ||
+        parentDir == "src";  # Include files within src/
+  };
+  
   # Build the Rust binary as a static binary
   uncompressed = naersk'.buildPackage {
     pname = "sui-price-oracle";
     inherit version;
-    src = ./.;
+    inherit src;
     
     CARGO_BUILD_TARGET = target;
     TARGET_CC = "${cc}/bin/${cc.targetPrefix}cc";
@@ -49,6 +63,7 @@ in rec {
   
   docker = pkgs.dockerTools.buildImage {
     name = "sui-price-oracle";
+    tag = "rust-reproducible-latest";
     copyToRoot = pkgs.buildEnv {
       name = "image-root";
       paths = [ compressed ];

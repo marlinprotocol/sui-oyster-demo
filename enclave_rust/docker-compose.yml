@@ -2,9 +2,12 @@ version: '3.8'
 
 services:
   sui-price-oracle:
-    image: prored/sui-price-oracle:rust-latest
+    # the hash is dependent on the architecture for which docker image is built
+    # for arm64 use: sha256:6ed2bddae6cf577e83bcafd5c7c83d905451cccd2f8597eb685a75204c6c133c
+    image: prored/sui-price-oracle@sha256:6ed2bddae6cf577e83bcafd5c7c83d905451cccd2f8597eb685a75204c6c133c
     container_name: sui-price-oracle
     restart: unless-stopped
+    init: true
     network_mode: host
     volumes:
       - /app/ecdsa.sec:/app/ecdsa.sec:ro
