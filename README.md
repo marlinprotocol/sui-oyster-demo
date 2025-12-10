@@ -147,21 +147,30 @@ sh register_enclave.sh \
 # Save ENCLAVE_ID from output
 ```
 
-#### Build and verify PCR values against blue images
+#### Verify PCR values using reproducible builds
 
-Install `nix` and `nitro-cli`. Clone the [Oyster Monorepo](https://github.com/marlinprotocol/oyster-monorepo). Checkout `base-blue-v3.0.0` tag and then build the enclave image using nix using commands shown below.
+To verify your enclave deployment against the canonical Oyster base images, you can rebuild them from source and compare PCR values. This ensures you're running the exact code you expect.
 
 ```sh
-# Clone the oyster monorepo
+# Launch Nix environment in Docker (no local installation needed)
+docker run -it nixos/nix bash
+
+# Inside the container, clone and build the Oyster base image
 git clone https://github.com/marlinprotocol/oyster-monorepo.git
-# Checkout base blue v3.0.0 tag
 cd oyster-monorepo && git checkout base-blue-v3.0.0
-# Build the enclave image
-nix build -vL --extra-experimental-features nix-command --extra-experimental-features flakes --accept-flake-config .#default.enclaves.blue.default
-# You can find pcr values at result/pcr.json or
-# Find PCRs of the EIF using nitro-cli
-nitro-cli describe-eif --eif-path result/image.eif
+
+# Build the enclave image reproducibly
+nix build -vL \
+  --extra-experimental-features nix-command \
+  --extra-experimental-features flakes \
+  --accept-flake-config \
+  .#default.enclaves.blue.default
+
+# View PCR values from the reproducible build
+cat result/pcr.json
 ```
+
+The PCR values in `result/pcr.json` should match those from `oyster-cvm verify --enclave-ip <PUBLIC_IP>` if you're running the canonical base image.
 
 ### Step 4: Initialize Oracle
 
