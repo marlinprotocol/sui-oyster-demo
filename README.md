@@ -123,7 +123,7 @@ See [enclave_rust/README.md](enclave_rust/README.md) for detailed instructions.
 # Get attestation
 curl http://<PUBLIC_IP>:1301/attestation/hex
 
-# Get PCR values to extract the PCR values from the enclave attestation. Record PCR0, PCR1, and PCR2 for later use.
+# Get PCR values to extract the PCR values from the enclave attestation. Record PCR0, PCR1, PCR2, PCR16 and imageId for later use.
 oyster-cvm verify --enclave-ip <PUBLIC_IP>
 
 # Update PCRs (after building enclave)
@@ -147,9 +147,16 @@ sh register_enclave.sh \
 # Save ENCLAVE_ID from output
 ```
 
-#### Verify PCR values using reproducible builds
+#### Verifying Enclave Integrity
 
-To verify your enclave deployment against the canonical Oyster base images, you can rebuild them from source and compare PCR values. This ensures you're running the exact code you expect.
+Enclave verification involves two separate checks:
+
+1. **Base Image Verification** (PCR0, PCR1, PCR2): Confirms the enclave uses the official Oyster blue base image
+2. **Application Verification** (PCR16/imageId): Confirms the exact application code running in the enclave
+
+#### Verify Base Image (PCR0, PCR1, PCR2)
+
+Rebuild the Oyster base image from source and compare PCR values to confirm you're running the canonical blue base image.
 
 ```sh
 # Launch Nix environment in Docker (no local installation needed)
@@ -170,7 +177,42 @@ nix build -vL \
 cat result/pcr.json
 ```
 
-The PCR values in `result/pcr.json` should match those from `oyster-cvm verify --enclave-ip <PUBLIC_IP>` if you're running the canonical base image.
+Compare the PCR0, PCR1, and PCR2 values in `result/pcr.json` with those from `oyster-cvm verify --enclave-ip <PUBLIC_IP>`.
+
+#### Verify Application Code (PCR16/imageId)
+
+Rebuild the application Docker image and verify it matches the deployed enclave.
+
+**Step 1: Build the Docker image reproducibly**
+
+```sh
+# Build the Rust enclave image (Node.js and Python support coming soon)
+./nix.sh build-rust
+
+# Load the image into Docker
+docker load < rust-image.tar.gz
+
+# Get the image digest
+docker images --digests --format '{{.Digest}}' sui-price-oracle:rust-reproducible-latest
+```
+
+**Step 2: Verify the image hash matches docker-compose.yml**
+
+The digest from the previous step should match the hash specified in `enclave_rust/docker-compose.yml`. This confirms the image was built from the source code in this repository.
+
+**Note**: Cross-platform builds are not currently supported, so the build architecture must match the deployment architecture(ARM64 and AMD64 are currently supported architectures).
+
+**Step 3: Compute and compare imageId**
+
+```sh
+# Calculate the expected imageId from docker-compose.yml
+oyster-cvm compute-image-id --docker-compose ./enclave_rust/docker-compose.yml
+
+# Compare with the imageId from the running enclave
+oyster-cvm verify --enclave-ip <PUBLIC_IP>
+```
+
+If both imageId values match, you have cryptographic proof that the deployed enclave is running the exact code you inspected and built locally.
 
 ### Step 4: Initialize Oracle
 

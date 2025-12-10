@@ -77,7 +77,7 @@ case "${1:-}" in
         docker run --rm -v "$(pwd):/workspace" -w /workspace \
             -e NIX_CONFIG='experimental-features = nix-command flakes' \
             ${NIX_IMAGE} \
-            sh -c "nix build .#rust && cat result > /workspace/rust-image.tar.gz"
+            sh -c "git config --global --add safe.directory /workspace && nix build .#rust && cat result > /workspace/rust-image.tar.gz"
         print_success "Build complete: rust-image.tar.gz"
         print_info "Load with: docker load < rust-image.tar.gz"
         ;;
@@ -88,7 +88,7 @@ case "${1:-}" in
         docker run --rm -v "$(pwd):/workspace" -w /workspace \
             -e NIX_CONFIG='experimental-features = nix-command flakes' \
             ${NIX_IMAGE} \
-            sh -c "nix build .#node && cat result > /workspace/node-image.tar.gz"
+            sh -c "git config --global --add safe.directory /workspace && nix build .#node && cat result > /workspace/node-image.tar.gz"
         print_success "Build complete: node-image.tar.gz"
         print_info "Load with: docker load < node-image.tar.gz"
         ;;
@@ -99,7 +99,7 @@ case "${1:-}" in
         docker run --rm -v "$(pwd):/workspace" -w /workspace \
             -e NIX_CONFIG='experimental-features = nix-command flakes' \
             ${NIX_IMAGE} \
-            sh -c "nix build .#python && cat result > /workspace/python-image.tar.gz"
+            sh -c "git config --global --add safe.directory /workspace && nix build .#python && cat result > /workspace/python-image.tar.gz"
         print_success "Build complete: python-image.tar.gz"
         print_info "Load with: docker load < python-image.tar.gz"
         ;;
@@ -111,17 +111,17 @@ case "${1:-}" in
         docker run --rm -v "$(pwd):/workspace" -w /workspace \
             -e NIX_CONFIG='experimental-features = nix-command flakes' \
             ${NIX_IMAGE} \
-            sh -c "nix build .#rust && cat result > /workspace/rust-image.tar.gz"
+            sh -c "git config --global --add safe.directory /workspace && nix build .#rust && cat result > /workspace/rust-image.tar.gz"
         print_info "Building Node.js..."
         docker run --rm -v "$(pwd):/workspace" -w /workspace \
             -e NIX_CONFIG='experimental-features = nix-command flakes' \
             ${NIX_IMAGE} \
-            sh -c "nix build .#node && cat result > /workspace/node-image.tar.gz"
+            sh -c "git config --global --add safe.directory /workspace && nix build .#node && cat result > /workspace/node-image.tar.gz"
         print_info "Building Python..."
         docker run --rm -v "$(pwd):/workspace" -w /workspace \
             -e NIX_CONFIG='experimental-features = nix-command flakes' \
             ${NIX_IMAGE} \
-            sh -c "nix build .#python && cat result > /workspace/python-image.tar.gz"
+            sh -c "git config --global --add safe.directory /workspace && nix build .#python && cat result > /workspace/python-image.tar.gz"
         print_success "All builds complete"
         echo "  Rust:   rust-image.tar.gz"
         echo "  Node:   node-image.tar.gz"
@@ -131,7 +131,10 @@ case "${1:-}" in
     update)
         check_docker
         print_header "Updating dependencies (using Nix in Docker)"
-        run_nix nix flake update
+        docker run --rm -v "$(pwd):/workspace" -w /workspace \
+            -e NIX_CONFIG='experimental-features = nix-command flakes' \
+            ${NIX_IMAGE} \
+            sh -c "git config --global --add safe.directory /workspace && nix flake update"
         print_success "Dependencies updated"
         print_info "Don't forget to commit flake.lock"
         ;;
