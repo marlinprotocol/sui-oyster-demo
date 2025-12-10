@@ -1,2 +1,22 @@
-target
-keys
+target/
+keys/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Nix build artifacts
+result
+result-*
+.dirlocals
+
+# Nix cache and direnv
+.nix-shell
+.envrc
+.direnv/
+
+# Docker images built with Nix
+docker-image-*
+
+# Keep flake.lock for reproducibility (DO NOT IGNORE)
+# flake.lock should be committed to git!

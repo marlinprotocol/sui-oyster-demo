@@ -257,6 +257,74 @@ sui client call \
   --type-args "<PACKAGE_ID>::oyster_demo::OYSTER_DEMO"
 ```
 
+## Reproducible Builds with Nix
+
+For production deployments, you can use Nix flakes to create **fully reproducible** Docker images with locked dependencies. This ensures identical builds across all machines and enables PCR attestation.
+
+### Prerequisites
+
+Only **Docker** is required. No need to install Nix on your machine.
+
+### Quick Start
+
+```bash
+# Using the helper script (recommended)
+./nix.sh build-rust    # Build Rust implementation
+./nix.sh build-node    # Build Node.js implementation
+./nix.sh build-python  # Build Python implementation
+
+# Load and run the Docker image
+docker load < result
+```
+
+### Available Commands
+
+```bash
+./nix.sh build-rust     # Build Rust Docker image (recommended for production)
+./nix.sh build-node     # Build Node.js Docker image
+./nix.sh build-python   # Build Python Docker image
+./nix.sh build-all      # Build all implementations
+./nix.sh update         # Update flake dependencies
+```
+
+### How It Works
+
+The Nix build system uses:
+- **flake.nix**: Defines all three language implementations and dev environments
+- **flake.lock**: Locks system package versions (Rust, Node.js, Python, etc.)
+- **Cargo.lock**: Locks Rust dependencies
+- **package-lock.json**: Locks Node.js dependencies
+- **requirements.txt**: Pins Python dependencies
+
+All builds run inside Docker using `nixos/nix:latest`, so you don't need to install Nix locally.
+
+### Manual Docker Commands
+
+If you prefer not to use the helper script:
+
+```bash
+# Build
+docker run --rm -it \
+  -v $(pwd):/workspace -w /workspace \
+  -e NIX_CONFIG='experimental-features = nix-command flakes' \
+  nixos/nix:latest \
+  nix build .#rust --out-link result
+
+# Development shell
+docker run --rm -it \
+  -v $(pwd):/workspace -w /workspace \
+  -e NIX_CONFIG='experimental-features = nix-command flakes' \
+  nixos/nix:latest \
+  nix develop
+```
+
+### Why Nix for Enclaves?
+
+1. **Reproducibility**: Identical builds on any machine → consistent PCR values
+2. **Attestation**: Users can rebuild images and verify they match deployed enclaves
+3. **Security**: Locked dependencies prevent supply chain attacks
+4. **Simplicity**: Single command builds entire stack with all dependencies
+
 ## Resources
 
 - [Sui Documentation](https://docs.sui.io/)
@@ -265,3 +333,4 @@ sui client call \
 - [Oyster CVM CLI](https://docs.marlin.org/oyster/build-cvm/quickstart)
 - [AWS Nitro Enclaves](https://aws.amazon.com/ec2/nitro/nitro-enclaves/)
 - [CoinGecko API](https://www.coingecko.com/en/api)
+- [Nix Flakes](https://nixos.wiki/wiki/Flakes)
