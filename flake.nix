@@ -15,45 +15,73 @@
 
   outputs = { self, nixpkgs, fenix, naersk }:
     let
-      # Support Linux (x86_64 and ARM64) for enclave deployments
-      systems = [ "x86_64-linux" "aarch64-linux" ];
-      forAllSystems = nixpkgs.lib.genAttrs systems;
+      # Support both x86_64 and aarch64 build hosts
+      supportedSystems = [ "x86_64-linux" "aarch64-linux" ];
+      forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
       
       version = "0.1.0";
       
-      # System-specific configuration for static builds
-      systemConfig = system: {
-        inherit system;
-        rust_target = if system == "x86_64-linux" then "x86_64-unknown-linux-musl" else "aarch64-unknown-linux-musl";
-        static = true;
-      };
+      # Target architectures for enclave deployments
+      # Build Linux binaries regardless of host system
+      mkTargets = system: 
+        let
+          # Always use Linux pkgs for the target architecture
+          linuxPkgs = nixpkgs.legacyPackages.${system};
+        in
+        {
+          amd64 = {
+            platform = "linux/amd64";
+            rust_target = "x86_64-unknown-linux-musl";
+            # Use x86_64-linux pkgs or cross-compile from aarch64-linux
+            pkgs = if system == "x86_64-linux"
+                   then linuxPkgs
+                   else linuxPkgs.pkgsCross.gnu64;
+          };
+          arm64 = {
+            platform = "linux/arm64";
+            rust_target = "aarch64-unknown-linux-musl";
+            # Use aarch64-linux pkgs or cross-compile from x86_64-linux
+            pkgs = if system == "aarch64-linux"
+                   then linuxPkgs
+                   else linuxPkgs.pkgsCross.aarch64-multiplatform;
+          };
+        };
+      
+      # Build for a specific target architecture
+      buildForTarget = system: targets: targetName: target:
+        let
+          # Import language-specific builders
+          rustBuild = import ./enclave_rust/build.nix { 
+            inherit version fenix naersk system;
+            pkgs = target.pkgs;
+            rust_target = target.rust_target;
+          };
+          pythonBuild = import ./enclave_python/build.nix { 
+            inherit version;
+            pkgs = target.pkgs;
+          };
+        in
+        {
+          rust = rustBuild.docker;
+          python = pythonBuild.docker;
+        };
     in
     {
       packages = forAllSystems (system:
         let
-          pkgs = nixpkgs.legacyPackages.${system};
-          config = systemConfig system;
-          
-          # Import language-specific builders with naersk/fenix for Rust
-          rustBuild = import ./enclave_rust/build.nix { 
-            inherit pkgs version fenix naersk;
-            systemConfig = config;
-          };
-          nodeBuild = import ./enclave_node/build.nix { 
-            inherit pkgs version;
-          };
-          pythonBuild = import ./enclave_python/build.nix { 
-            inherit pkgs version;
-          };
+          targets = mkTargets system;
         in
         {
-          # Individual implementations
-          rust = rustBuild.docker;
-          node = nodeBuild.docker;
-          python = pythonBuild.docker;
+          # AMD64 builds
+          rust-amd64 = (buildForTarget system targets "amd64" targets.amd64).rust;
+          python-amd64 = (buildForTarget system targets "amd64" targets.amd64).python;
           
-          # Default to Rust (recommended for production)
-          default = rustBuild.docker;
+          # ARM64 builds
+          rust-arm64 = (buildForTarget system targets "arm64" targets.arm64).rust;
+          python-arm64 = (buildForTarget system targets "arm64" targets.arm64).python;
+          
+          # Default to AMD64 Rust
+          default = (buildForTarget system targets "amd64" targets.amd64).rust;
         }
       );
     };

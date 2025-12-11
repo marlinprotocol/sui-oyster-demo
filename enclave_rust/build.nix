@@ -1,15 +1,12 @@
-{ pkgs, version, fenix, naersk, systemConfig }:
+{ pkgs, version, fenix, naersk, system, rust_target }:
 
 let
-  system = systemConfig.system;
-  target = systemConfig.rust_target;
-  
   # Setup Rust toolchain with fenix
   toolchain = with fenix.packages.${system};
     combine [
       stable.cargo
       stable.rustc
-      targets.${target}.stable.rust-std
+      targets.${rust_target}.stable.rust-std
     ];
   
   # Setup naersk with the custom toolchain
@@ -18,10 +15,8 @@ let
     rustc = toolchain;
   };
   
-  # Use static compiler if requested
-  cc = if systemConfig.static
-    then pkgs.pkgsStatic.stdenv.cc
-    else pkgs.stdenv.cc;
+  # Use static compiler for musl builds
+  cc = pkgs.pkgsStatic.stdenv.cc;
   
   # Filter source to only include necessary files for reproducibility
   src = pkgs.lib.cleanSourceWith {
@@ -43,7 +38,7 @@ let
     inherit version;
     inherit src;
     
-    CARGO_BUILD_TARGET = target;
+    CARGO_BUILD_TARGET = rust_target;
     TARGET_CC = "${cc}/bin/${cc.targetPrefix}cc";
     nativeBuildInputs = [ cc ];
   };

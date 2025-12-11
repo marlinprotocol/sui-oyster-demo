@@ -53,33 +53,68 @@ Nix Build Helper (Docker-based - no Nix installation required!)
 Usage: ./nix.sh <command>
 
 Commands:
-  build-rust     Build Rust Docker image
-  build-node     Build Node.js Docker image
-  build-python   Build Python Docker image
-  build-all      Build all implementations
+  build-rust-amd64       Build Rust Docker image for Linux AMD64
+  build-rust-arm64       Build Rust Docker image for Linux ARM64
+  build-python-amd64     Build Python Docker image for Linux AMD64
+  build-python-arm64     Build Python Docker image for Linux ARM64
+  build-all              Build all implementations for both architectures
   
-  update         Update dependencies
-  clean          Clean build artifacts
-  help           Show this help
+  update                 Update dependencies
+  clean                  Clean build artifacts
+  help                   Show this help
 
 Examples:
-  ./nix.sh build-rust
-  ./nix.sh update
+  ./nix.sh build-rust-amd64
+  ./nix.sh build-python-arm64
+  ./nix.sh build-all
 
 Note: This script uses Docker to run Nix - you only need Docker installed!
 EOF
 }
 
 case "${1:-}" in
-    build-rust)
+    build-rust-amd64)
         check_docker
-        print_header "Building Rust Docker image (using Nix in Docker)"
+        print_header "Building Rust Docker image for Linux AMD64 (using Nix in Docker)"
         docker run --rm -v "$(pwd):/workspace" -w /workspace \
             -e NIX_CONFIG='experimental-features = nix-command flakes' \
             ${NIX_IMAGE} \
-            sh -c "git config --global --add safe.directory /workspace && nix build .#rust && cat result > /workspace/rust-image.tar.gz"
-        print_success "Build complete: rust-image.tar.gz"
-        print_info "Load with: docker load < rust-image.tar.gz"
+            sh -c "git config --global --add safe.directory /workspace && nix build --system x86_64-linux .#rust-amd64 && cat result > /workspace/rust-amd64-image.tar.gz"
+        print_success "Build complete: rust-amd64-image.tar.gz"
+        print_info "Load with: docker load < rust-amd64-image.tar.gz"
+        ;;
+    
+    build-rust-arm64)
+        check_docker
+        print_header "Building Rust Docker image for Linux ARM64 (using Nix in Docker)"
+        docker run --rm -v "$(pwd):/workspace" -w /workspace \
+            -e NIX_CONFIG='experimental-features = nix-command flakes' \
+            ${NIX_IMAGE} \
+            sh -c "git config --global --add safe.directory /workspace && nix build --system aarch64-linux .#rust-arm64 && cat result > /workspace/rust-arm64-image.tar.gz"
+        print_success "Build complete: rust-arm64-image.tar.gz"
+        print_info "Load with: docker load < rust-arm64-image.tar.gz"
+        ;;
+    
+    build-python-amd64)
+        check_docker
+        print_header "Building Python Docker image for Linux AMD64 (using Nix in Docker)"
+        docker run --rm -v "$(pwd):/workspace" -w /workspace \
+            -e NIX_CONFIG='experimental-features = nix-command flakes' \
+            ${NIX_IMAGE} \
+            sh -c "git config --global --add safe.directory /workspace && nix build --system x86_64-linux .#python-amd64 && cat result > /workspace/python-amd64-image.tar.gz"
+        print_success "Build complete: python-amd64-image.tar.gz"
+        print_info "Load with: docker load < python-amd64-image.tar.gz"
+        ;;
+    
+    build-python-arm64)
+        check_docker
+        print_header "Building Python Docker image for Linux ARM64 (using Nix in Docker)"
+        docker run --rm -v "$(pwd):/workspace" -w /workspace \
+            -e NIX_CONFIG='experimental-features = nix-command flakes' \
+            ${NIX_IMAGE} \
+            sh -c "git config --global --add safe.directory /workspace && nix build --system aarch64-linux .#python-arm64 && cat result > /workspace/python-arm64-image.tar.gz"
+        print_success "Build complete: python-arm64-image.tar.gz"
+        print_info "Load with: docker load < python-arm64-image.tar.gz"
         ;;
     
     build-node)
@@ -93,39 +128,34 @@ case "${1:-}" in
         print_info "Load with: docker load < node-image.tar.gz"
         ;;
     
-    build-python)
-        check_docker
-        print_header "Building Python Docker image (using Nix in Docker)"
-        docker run --rm -v "$(pwd):/workspace" -w /workspace \
-            -e NIX_CONFIG='experimental-features = nix-command flakes' \
-            ${NIX_IMAGE} \
-            sh -c "git config --global --add safe.directory /workspace && nix build .#python && cat result > /workspace/python-image.tar.gz"
-        print_success "Build complete: python-image.tar.gz"
-        print_info "Load with: docker load < python-image.tar.gz"
-        ;;
-    
     build-all)
         check_docker
         print_header "Building all implementations (using Nix in Docker)"
-        print_info "Building Rust..."
+        print_info "Building Rust AMD64..."
         docker run --rm -v "$(pwd):/workspace" -w /workspace \
             -e NIX_CONFIG='experimental-features = nix-command flakes' \
             ${NIX_IMAGE} \
-            sh -c "git config --global --add safe.directory /workspace && nix build .#rust && cat result > /workspace/rust-image.tar.gz"
-        print_info "Building Node.js..."
+            sh -c "git config --global --add safe.directory /workspace && nix build --system x86_64-linux .#rust-amd64 && cat result > /workspace/rust-amd64-image.tar.gz"
+        print_info "Building Rust ARM64..."
         docker run --rm -v "$(pwd):/workspace" -w /workspace \
             -e NIX_CONFIG='experimental-features = nix-command flakes' \
             ${NIX_IMAGE} \
-            sh -c "git config --global --add safe.directory /workspace && nix build .#node && cat result > /workspace/node-image.tar.gz"
-        print_info "Building Python..."
+            sh -c "git config --global --add safe.directory /workspace && nix build --system aarch64-linux .#rust-arm64 && cat result > /workspace/rust-arm64-image.tar.gz"
+        print_info "Building Python AMD64..."
         docker run --rm -v "$(pwd):/workspace" -w /workspace \
             -e NIX_CONFIG='experimental-features = nix-command flakes' \
             ${NIX_IMAGE} \
-            sh -c "git config --global --add safe.directory /workspace && nix build .#python && cat result > /workspace/python-image.tar.gz"
+            sh -c "git config --global --add safe.directory /workspace && nix build --system x86_64-linux .#python-amd64 && cat result > /workspace/python-amd64-image.tar.gz"
+        print_info "Building Python ARM64..."
+        docker run --rm -v "$(pwd):/workspace" -w /workspace \
+            -e NIX_CONFIG='experimental-features = nix-command flakes' \
+            ${NIX_IMAGE} \
+            sh -c "git config --global --add safe.directory /workspace && nix build --system aarch64-linux .#python-arm64 && cat result > /workspace/python-arm64-image.tar.gz"
         print_success "All builds complete"
-        echo "  Rust:   rust-image.tar.gz"
-        echo "  Node:   node-image.tar.gz"
-        echo "  Python: python-image.tar.gz"
+        echo "  Rust AMD64:   rust-amd64-image.tar.gz"
+        echo "  Rust ARM64:   rust-arm64-image.tar.gz"
+        echo "  Python AMD64: python-amd64-image.tar.gz"
+        echo "  Python ARM64: python-arm64-image.tar.gz"
         ;;
     
     update)
