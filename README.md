@@ -98,24 +98,34 @@ See [contracts/README.md](contracts/README.md) for detailed instructions.
 
 ### Step 2: Build and Deploy Enclave
 
+Pick an implementation and target architecture, then build reproducibly with Nix (artifacts are tarballs you can `docker load`).
+
 ```bash
-cd enclave_rust
+# From repo root
+./nix.sh build-rust-amd64    # or build-rust-arm64
+./nix.sh build-node-amd64    # or build-node-arm64
+./nix.sh build-python-amd64  # or build-python-arm64
 
-# Build Docker image
-docker build -t <your-dockerhub-username>/sui-price-oracle .
-docker push <your-dockerhub-username>/sui-price-oracle:latest
+docker load < rust-amd64-image.tar.gz   # example for Rust/amd64
+# Tag/push (example for Rust/amd64)
+docker tag sui-price-oracle:rust-reproducible-latest <registry>/sui-price-oracle:rust-reproducible-latest
+docker push <registry>/sui-price-oracle:rust-reproducible-latest
 
-# Deploy with Oyster
+# Get the pushed digest and update compose (per architecture)
+DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' <registry>/sui-price-oracle:rust-reproducible-latest)
+sed -i '' "s@^\s*image: .*@    image: ${DIGEST}@" enclave_rust/docker-compose.yml
+
+# Deploy with Oyster (point docker-compose to your pushed image/digest)
 oyster-cvm deploy \
   --wallet-private-key $PRIVATE_KEY \
-  --docker-compose ./docker-compose.yml \
+  --docker-compose ./enclave_rust/docker-compose.yml \
   --instance-type c6g.xlarge \
   --duration-in-minutes 60
-
 # Save PUBLIC_IP from output
+# For Node/Python, adjust the tag/push, update the compose image to the digest, and use ./enclave_node or ./enclave_python compose files
 ```
 
-See [enclave_rust/README.md](enclave_rust/README.md) for detailed instructions.
+See the language-specific READMEs for deployment details.
 
 ### Step 3: Register Enclave On-Chain
 
@@ -186,18 +196,18 @@ Rebuild the application Docker image and verify it matches the deployed enclave.
 **Step 1: Build the Docker image reproducibly**
 
 ```sh
-# Build the Rust enclave image (recommended for production)
-./nix.sh build-rust
+# Pick implementation + architecture
+./nix.sh build-rust-amd64    # or build-rust-arm64
+./nix.sh build-node-amd64    # or build-node-arm64
+./nix.sh build-python-amd64  # or build-python-arm64
 
-# Or build Python enclave image
-./nix.sh build-python
-
-# Load the image into Docker
-docker load < rust-image.tar.gz  # or python-image.tar.gz
+# Load the image into Docker (example for Rust/amd64)
+docker load < rust-amd64-image.tar.gz
 
 # Get the image digest
 docker images --digests --format '{{.Digest}}' sui-price-oracle:rust-reproducible-latest
-# or for Python:
+# or:
+docker images --digests --format '{{.Digest}}' sui-price-oracle:node-reproducible-latest
 docker images --digests --format '{{.Digest}}' sui-price-oracle:python-reproducible-latest
 ```
 
@@ -205,7 +215,7 @@ docker images --digests --format '{{.Digest}}' sui-price-oracle:python-reproduci
 
 The digest from the previous step should match the hash specified in `enclave_rust/docker-compose.yml` (or `enclave_python/docker-compose.yml` for Python). This confirms the image was built from the source code in this repository.
 
-**Note**: Cross-platform builds are not currently supported, so the build architecture must match the deployment architecture (ARM64 and AMD64 are currently supported architectures).
+**Note**: Builds are reproducible for both AMD64 and ARM64. Use the artifact that matches your deployment architecture.
 
 **Step 3: Compute and compare imageId**
 
@@ -315,73 +325,6 @@ sui client call \
   --type-args "<PACKAGE_ID>::oyster_demo::OYSTER_DEMO"
 ```
 
-## Reproducible Builds with Nix
-
-For production deployments, you can use Nix flakes to create **fully reproducible** Docker images with locked dependencies. This ensures identical builds across all machines and enables PCR attestation.
-
-### Prerequisites
-
-Only **Docker** is required. No need to install Nix on your machine.
-
-### Quick Start
-
-```bash
-# Using the helper script (recommended)
-./nix.sh build-rust    # Build Rust implementation
-./nix.sh build-node    # Build Node.js implementation
-./nix.sh build-python  # Build Python implementation
-
-# Load and run the Docker image
-docker load < result
-```
-
-### Available Commands
-
-```bash
-./nix.sh build-rust     # Build Rust Docker image (recommended for production)
-./nix.sh build-node     # Build Node.js Docker image (WIP - not yet reproducible)
-./nix.sh build-python   # Build Python Docker image
-./nix.sh build-all      # Build all implementations
-./nix.sh update         # Update flake dependencies
-```
-
-### How It Works
-
-The Nix build system uses:
-- **flake.nix**: Defines all three language implementations and dev environments
-- **flake.lock**: Locks system package versions (Rust, Node.js, Python, etc.)
-- **Cargo.lock**: Locks Rust dependencies
-- **package-lock.json**: Locks Node.js dependencies
-- **requirements.txt**: Pins Python dependencies
-
-All builds run inside Docker using `nixos/nix:latest`, so you don't need to install Nix locally.
-
-### Manual Docker Commands
-
-If you prefer not to use the helper script:
-
-```bash
-# Build
-docker run --rm -it \
-  -v $(pwd):/workspace -w /workspace \
-  -e NIX_CONFIG='experimental-features = nix-command flakes' \
-  nixos/nix:latest \
-  nix build .#rust --out-link result
-
-# Development shell
-docker run --rm -it \
-  -v $(pwd):/workspace -w /workspace \
-  -e NIX_CONFIG='experimental-features = nix-command flakes' \
-  nixos/nix:latest \
-  nix develop
-```
-
-### Why Nix for Enclaves?
-
-1. **Reproducibility**: Identical builds on any machine → consistent PCR values
-2. **Attestation**: Users can rebuild images and verify they match deployed enclaves
-3. **Security**: Locked dependencies prevent supply chain attacks
-4. **Simplicity**: Single command builds entire stack with all dependencies
 
 ## Resources
 
