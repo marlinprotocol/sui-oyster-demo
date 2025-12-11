@@ -95,17 +95,13 @@ fun update_price<T: drop>(
     };
     let message_bytes = bcs::to_bytes(&intent_message);
     
-    // Nautilus stores uncompressed secp256k1 public key (64 bytes: X,Y coordinates)
-    // but secp256k1_verify expects compressed format (33 bytes: prefix + X)
-    // Convert: add 0x02 or 0x03 prefix based on Y coordinate parity
     let enclave_pk = enclave.pk();
-    let compressed_pk = compress_secp256k1_pubkey(enclave_pk);
     
     // Verify secp256k1 signature with SHA256 hash (flag = 1)
     // The function will hash message_bytes with SHA256 before verifying
     let is_valid = ecdsa_k1::secp256k1_verify(
         &signature,
-        &compressed_pk,
+        enclave_pk,
         &message_bytes,
         1 // SHA256 hash function
     );
@@ -149,31 +145,6 @@ public fun get_latest_timestamp<T>(oracle: &PriceOracle<T>): u64 {
     oracle.latest_timestamp
 }
 
-/// Compress an uncompressed secp256k1 public key (64 bytes) to compressed format (33 bytes)
-/// Input: 64 bytes (X coordinate 32 bytes + Y coordinate 32 bytes)
-/// Output: 33 bytes (0x02/0x03 prefix + X coordinate 32 bytes)
-fun compress_secp256k1_pubkey(uncompressed: &vector<u8>): vector<u8> {
-    assert!(uncompressed.length() == 64, EInvalidSignature);
-    
-    let mut compressed = vector::empty<u8>();
-    
-    // Get the last byte of Y coordinate to determine parity
-    let y_last_byte = uncompressed[63];
-    
-    // Prefix: 0x02 if Y is even, 0x03 if Y is odd
-    let prefix = if (y_last_byte % 2 == 0) { 0x02 } else { 0x03 };
-    compressed.push_back(prefix);
-    
-    // Append X coordinate (first 32 bytes)
-    let mut i = 0;
-    while (i < 32) {
-        compressed.push_back(uncompressed[i]);
-        i = i + 1;
-    };
-    
-    compressed
-}
-
 /// Module initializer - sets up enclave config
 /// The oracle will be created after enclave registration
 fun init(witness: OYSTER_DEMO, ctx: &mut TxContext) {
@@ -189,6 +160,8 @@ fun init(witness: OYSTER_DEMO, ctx: &mut TxContext) {
         x"b0d319fa64f9c2c9d7e9187bc21001ddacfab4077e737957fa1b8b97cc993bed43a79019aebfd40ee5f6f213147909f8",
         // PCR2: Enclave application hash - update after building your enclave
         x"fdb2295dc5d9b67a653ed5f3ead5fc8166ec3cae1de1c7c6f31c3b43b2eb26ab5d063f414f3d2b93163426805dfe057e",
+        // PCR16: Application image hash - update after building your application
+        x"94a33ba1298c64a16a1f4c9cc716525c86497017e09dd976afcaf812b0e2a3e8ba04ff6954167ad69a6413a1e6e44621",
         ctx,
     );
     

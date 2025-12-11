@@ -110,7 +110,7 @@ sui client call \
     --package <ENCLAVE_PACKAGE_ID> \
     --module enclave \
     --function update_pcrs \
-    --args <ENCLAVE_CONFIG_ID> <CAP_ID> 0x<PCR0> 0x<PCR1> 0x<PCR2> \
+    --args <ENCLAVE_CONFIG_ID> <CAP_ID> 0x<PCR0> 0x<PCR1> 0x<PCR2> 0x<PCR16>\
     --type-args "<PACKAGE_ID>::oyster_demo::OYSTER_DEMO" \
     --gas-budget 10000000
 ```

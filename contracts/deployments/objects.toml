@@ -1,7 +1,6 @@
 [testnet]
-package_id = "0x889f8cd16439ce0af513962d0ba94e41ffb8d91ccf6f4369920dddb68f50fa23" # modules - enclave, oyster_demo
-Cap = "0x7e849d0bbee65ff912ed90eebb548d24cd96e7f39c3c933d37e84baad3f3e0eb"
-EnclaveConfig = "0x56b3b1cc12565dd402d7ff2028492e1cd8e83aafaa9931d0eb8480c706e5e470"
-UpgradeCap = "0x7869075d57655f13f8ba638d1c99017fce155b6465235b4b70e7965b76068f23"
-PriceOracle = "0x28a88b740bd36a3ee57eaece0593eb7dc844d6232cacd65a229ce4a75ddbee5f"
+package_id = "0x20b65f52a0bab5d43e408a67af7c0d4abbe7f721973a5e6e76cb18c54450f705" # modules - enclave, oyster_demo
+Cap = "0x7e8199ca0e8298f01765ab52492b70cef5ffe6348b5f16f5e1bdaaedc6cd9a25"
+EnclaveConfig = "0x66acfd06236812214d93b073f43a89c3da2a90b14b512f7fa9dea33526c7288f"
+UpgradeCap = "0xa4be56a45004d3e21770942b1c28c086778a4d87d538a7ae43e7be045f70a2b4"
 rpc_url = "https://fullnode.testnet.sui.io:443"
