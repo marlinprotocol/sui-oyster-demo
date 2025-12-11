@@ -1,0 +1,58 @@
+{ pkgs, version }:
+
+let
+  # Use Node 20 for stability
+  nodejs = pkgs.nodejs_20;
+
+  # Filter source to only what is needed for reproducible builds
+  src = pkgs.lib.cleanSourceWith {
+    src = ./.;
+    filter = path: type:
+      let
+        baseName = baseNameOf path;
+        parentDir = baseNameOf (dirOf path);
+      in
+        baseName == "package.json" ||
+        baseName == "package-lock.json" ||
+        baseName == "src" ||
+        parentDir == "src";
+  };
+
+  # Build the Node.js application with locked dependencies (pure JS only)
+  app = pkgs.buildNpmPackage {
+    pname = "sui-price-oracle-node";
+    inherit version src nodejs;
+
+    # Hash for dependencies - pure JS only, no native modules
+    npmDepsHash = "sha256-EhjsjQBIELP0S++uQZzDB2kdJ8u579NikQBbDoYaHJo=";
+
+    dontNpmBuild = true;
+    npmInstallFlags = [ "--omit=dev" ];
+
+    installPhase = ''
+      runHook preInstall
+      mkdir -p $out/app
+      cp -r . $out/app
+      runHook postInstall
+    '';
+  };
+
+in rec {
+  inherit app nodejs;
+
+  docker = pkgs.dockerTools.buildImage {
+    name = "sui-price-oracle-node";
+    tag = "node-reproducible-latest";
+    copyToRoot = pkgs.buildEnv {
+      name = "image-root";
+      paths = [ nodejs app ];
+      pathsToLink = [ "/bin" "/app" ];
+    };
+    config = {
+      WorkingDir = "/app";
+      Entrypoint = [ "${nodejs}/bin/node" "/app/src/index.js" "/app/ecdsa.sec" ];
+    };
+  };
+
+  default = docker;
+}

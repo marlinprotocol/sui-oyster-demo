@@ -60,10 +60,15 @@
             inherit version;
             pkgs = target.pkgs;
           };
+          nodeBuild = import ./enclave_node/build.nix {
+            inherit version;
+            pkgs = target.pkgs;
+          };
         in
         {
           rust = rustBuild.docker;
           python = pythonBuild.docker;
+          node = nodeBuild.docker;
         };
     in
     {
@@ -75,10 +80,12 @@
           # AMD64 builds
           rust-amd64 = (buildForTarget system targets "amd64" targets.amd64).rust;
           python-amd64 = (buildForTarget system targets "amd64" targets.amd64).python;
+          node-amd64 = (buildForTarget system targets "amd64" targets.amd64).node;
           
           # ARM64 builds
           rust-arm64 = (buildForTarget system targets "arm64" targets.arm64).rust;
           python-arm64 = (buildForTarget system targets "arm64" targets.arm64).python;
+          node-arm64 = (buildForTarget system targets "arm64" targets.arm64).node;
           
           # Default to AMD64 Rust
           default = (buildForTarget system targets "amd64" targets.amd64).rust;

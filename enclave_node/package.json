@@ -14,10 +14,11 @@
     "enclave"
   ],
   "author": "",
+  "license": "Apache-2.0",
   "dependencies": {
-    "express": "^4.18.2",
+    "@mysten/bcs": "^1.9.2",
+    "@noble/secp256k1": "^2.1.0",
     "axios": "^1.6.2",
-    "secp256k1": "^5.0.0",
-    "@mysten/bcs": "^1.9.2"
+    "express": "^4.18.2"
   }
 }
