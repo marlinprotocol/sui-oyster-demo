@@ -186,27 +186,34 @@ Rebuild the application Docker image and verify it matches the deployed enclave.
 **Step 1: Build the Docker image reproducibly**
 
 ```sh
-# Build the Rust enclave image (Node.js and Python support coming soon)
+# Build the Rust enclave image (recommended for production)
 ./nix.sh build-rust
 
+# Or build Python enclave image
+./nix.sh build-python
+
 # Load the image into Docker
-docker load < rust-image.tar.gz
+docker load < rust-image.tar.gz  # or python-image.tar.gz
 
 # Get the image digest
 docker images --digests --format '{{.Digest}}' sui-price-oracle:rust-reproducible-latest
+# or for Python:
+docker images --digests --format '{{.Digest}}' sui-price-oracle:python-reproducible-latest
 ```
 
 **Step 2: Verify the image hash matches docker-compose.yml**
 
-The digest from the previous step should match the hash specified in `enclave_rust/docker-compose.yml`. This confirms the image was built from the source code in this repository.
+The digest from the previous step should match the hash specified in `enclave_rust/docker-compose.yml` (or `enclave_python/docker-compose.yml` for Python). This confirms the image was built from the source code in this repository.
 
-**Note**: Cross-platform builds are not currently supported, so the build architecture must match the deployment architecture(ARM64 and AMD64 are currently supported architectures).
+**Note**: Cross-platform builds are not currently supported, so the build architecture must match the deployment architecture (ARM64 and AMD64 are currently supported architectures).
 
 **Step 3: Compute and compare imageId**
 
 ```sh
 # Calculate the expected imageId from docker-compose.yml
 oyster-cvm compute-image-id --docker-compose ./enclave_rust/docker-compose.yml
+# or for Python:
+oyster-cvm compute-image-id --docker-compose ./enclave_python/docker-compose.yml
 
 # Compare with the imageId from the running enclave
 oyster-cvm verify --enclave-ip <PUBLIC_IP>
@@ -332,7 +339,7 @@ docker load < result
 
 ```bash
 ./nix.sh build-rust     # Build Rust Docker image (recommended for production)
-./nix.sh build-node     # Build Node.js Docker image
+./nix.sh build-node     # Build Node.js Docker image (WIP - not yet reproducible)
 ./nix.sh build-python   # Build Python Docker image
 ./nix.sh build-all      # Build all implementations
 ./nix.sh update         # Update flake dependencies
