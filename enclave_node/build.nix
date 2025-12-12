@@ -24,7 +24,7 @@ let
     inherit version src nodejs;
 
     # Hash for dependencies - pure JS only, no native modules
-    npmDepsHash = "sha256-EhjsjQBIELP0S++uQZzDB2kdJ8u579NikQBbDoYaHJo=";
+    npmDepsHash = "sha256-HOZO9+yHJoSu3k653D8PKR/MJnML0jnpuMDnkrzdv9I=";
 
     dontNpmBuild = true;
     npmInstallFlags = [ "--omit=dev" ];
@@ -45,12 +45,13 @@ in rec {
     tag = "node-reproducible-${arch}";
     copyToRoot = pkgs.buildEnv {
       name = "image-root";
-      paths = [ nodejs app ];
+      paths = [ nodejs app pkgs.cacert ];
       pathsToLink = [ "/bin" "/app" ];
     };
     config = {
       WorkingDir = "/app";
       Entrypoint = [ "${nodejs}/bin/node" "/app/src/index.js" "/app/ecdsa.sec" ];
+      Env = [ "SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt" ];
     };
   };
 

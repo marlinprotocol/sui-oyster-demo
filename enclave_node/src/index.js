@@ -1,9 +1,15 @@
 import express from 'express';
 import axios from 'axios';
-import * as secp256k1 from '@noble/secp256k1';
+import { sign, getPublicKey, hashes } from '@noble/secp256k1';
+import { sha256 } from '@noble/hashes/sha2.js';
+import { hmac } from '@noble/hashes/hmac.js';
 import { createHash } from 'crypto';
 import fs from 'fs';
 import { bcs } from '@mysten/bcs';
+
+// Configure @noble/secp256k1 to use @noble/hashes for SHA-256
+hashes.sha256 = sha256;
+hashes.hmacSha256 = (key, msg) => hmac(sha256, key, msg);
 
 // Define the structures to match Move contract
 const PriceUpdatePayload = bcs.struct('PriceUpdatePayload', {
@@ -73,11 +79,11 @@ function signPriceData(privateKey, price, timestampMs) {
   // Hash with SHA256
   const hash = createHash('sha256').update(messageBytes).digest();
   
-  // Sign with secp256k1 using @noble/secp256k1
-  const signature = secp256k1.sign(hash, privateKey);
+  // Sign with secp256k1
+  const signature = sign(hash, privateKey);
   
   // Return hex-encoded compact signature (64 bytes: r + s)
-  return Buffer.from(signature.toCompactRawBytes()).toString('hex');
+  return Buffer.from(signature).toString('hex');
 }
 
 /**
@@ -91,8 +97,10 @@ function loadSigningKeyFromFile(path) {
     throw new Error(`Expected 32-byte secp256k1 private key, got ${keyBytes.length} bytes`);
   }
   
-  // Verify it's a valid secp256k1 private key using @noble/secp256k1
-  if (!secp256k1.utils.isValidPrivateKey(keyBytes)) {
+  // Verify it's a valid secp256k1 private key
+  try {
+    getPublicKey(keyBytes);
+  } catch (error) {
     throw new Error('Invalid secp256k1 private key');
   }
   
@@ -111,8 +119,8 @@ app.get('/health', (req, res) => {
 
 // Get public key endpoint
 app.get('/public-key', (req, res) => {
-  // Derive compressed public key from private key using @noble/secp256k1
-  const publicKey = secp256k1.getPublicKey(signingKey, true);
+  // Derive compressed public key from private key
+  const publicKey = getPublicKey(signingKey, true);
   const pkHex = Buffer.from(publicKey).toString('hex');
   
   res.json({
@@ -167,8 +175,8 @@ async function main() {
   signingKey = loadSigningKeyFromFile(keyPath);
   console.log('Signing key loaded successfully');
   
-  // Log public key for reference using @noble/secp256k1
-  const publicKey = secp256k1.getPublicKey(signingKey, true);
+  // Log public key for reference
+  const publicKey = getPublicKey(signingKey, true);
   console.log(`Public key (hex): ${Buffer.from(publicKey).toString('hex')}`);
   
   // Start server
