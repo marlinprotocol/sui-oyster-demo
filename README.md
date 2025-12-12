@@ -102,17 +102,17 @@ Pick an implementation and target architecture, then build reproducibly with Nix
 
 ```bash
 # From repo root
-./nix.sh build-rust-amd64    # or build-rust-arm64
-./nix.sh build-node-amd64    # or build-node-arm64
-./nix.sh build-python-amd64  # or build-python-arm64
+./nix.sh build-rust-arm64    # or build-rust-amd64
+./nix.sh build-node-arm64    # or build-node-amd64
+./nix.sh build-python-arm64  # or build-python-amd64
 
-docker load < rust-amd64-image.tar.gz   # example for Rust/amd64
-# Tag/push (example for Rust/amd64)
-docker tag sui-price-oracle:rust-reproducible-latest <registry>/sui-price-oracle:rust-reproducible-latest
-docker push <registry>/sui-price-oracle:rust-reproducible-latest
+docker load < ./rust-arm64-image.tar.gz   # example for Rust/arm64
+# Tag/push (example for Rust/arm64)
+docker tag sui-price-oracle:rust-reproducible-arm64 <registry>/sui-price-oracle:rust-reproducible-arm64
+docker push <registry>/sui-price-oracle:rust-reproducible-arm64
 
 # Get the pushed digest and update compose (per architecture)
-DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' <registry>/sui-price-oracle:rust-reproducible-latest)
+DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' <registry>/sui-price-oracle:rust-reproducible-arm64)
 sed -i '' "s@^\s*image: .*@    image: ${DIGEST}@" enclave_rust/docker-compose.yml
 
 # Deploy with Oyster (point docker-compose to your pushed image/digest)
@@ -197,25 +197,25 @@ Rebuild the application Docker image and verify it matches the deployed enclave.
 
 ```sh
 # Pick implementation + architecture
-./nix.sh build-rust-amd64    # or build-rust-arm64
-./nix.sh build-node-amd64    # or build-node-arm64
-./nix.sh build-python-amd64  # or build-python-arm64
+./nix.sh build-rust-arm64    # or build-rust-amd64
+./nix.sh build-node-arm64    # or build-node-amd64
+./nix.sh build-python-arm64  # or build-python-amd64
 
-# Load the image into Docker (example for Rust/amd64)
-docker load < rust-amd64-image.tar.gz
+# Load the image into Docker (example for Rust/arm64)
+docker load < ./rust-arm64-image.tar.gz
 
 # Get the image digest
-docker images --digests --format '{{.Digest}}' sui-price-oracle:rust-reproducible-latest
+docker images --digests --format '{{.Digest}}' sui-price-oracle:rust-reproducible-arm64
 # or:
-docker images --digests --format '{{.Digest}}' sui-price-oracle:node-reproducible-latest
-docker images --digests --format '{{.Digest}}' sui-price-oracle:python-reproducible-latest
+docker images --digests --format '{{.Digest}}' sui-price-oracle:node-reproducible-arm64
+docker images --digests --format '{{.Digest}}' sui-price-oracle:python-reproducible-arm64
 ```
 
 **Step 2: Verify the image hash matches docker-compose.yml**
 
 The digest from the previous step should match the hash specified in `enclave_rust/docker-compose.yml` (or `enclave_python/docker-compose.yml` for Python). This confirms the image was built from the source code in this repository.
 
-**Note**: Builds are reproducible for both AMD64 and ARM64. Use the artifact that matches your deployment architecture.
+**Note**: Builds are reproducible for both arm64 and ARM64. Use the artifact that matches your deployment architecture.
 
 **Step 3: Compute and compare imageId**
 
@@ -325,6 +325,49 @@ sui client call \
   --type-args "<PACKAGE_ID>::oyster_demo::OYSTER_DEMO"
 ```
 
+## Reproducible Builds: Pitfalls & Best Practices
+
+When building reproducible enclave images, avoid these common gotchas:
+
+### ❌ **Native/Compiled Dependencies**
+- **Pitfall**: Using native modules (e.g., original secp256k1, node-gyp) breaks reproducibility across architectures.
+- **Fix**: Prefer pure-language implementations (@noble/secp256k1 for JS, libsodium for bindings, etc.) or accept per-architecture builds.
+
+### ❌ **Using Tags Instead of Digests**
+- **Pitfall**: Docker tags (`:latest`, `:v1.0`) move and don't guarantee content—digest mismatches lead to PCR failures.
+- **Fix**: Always use image digests (`sha256:abc...`) in docker-compose.yml; capture with `docker inspect --format='{{index .RepoDigests 0}}'` after pushing.
+
+### ❌ **Loose or Missing Lock Files**
+- **Pitfall**: Unlocked dependencies (package.json without package-lock.json, Cargo.toml without Cargo.lock) drift over time → different binaries.
+- **Fix**: Commit lock files (Cargo.lock, package-lock.json) and requirements.txt; use npmDepsHash (or equivalent) to guard against drift.
+
+### ❌ **Modifying Dependencies Without Updating Hashes**
+- **Pitfall**: Changing package.json/Cargo.toml but forgetting to update npmDepsHash or Cargo.lock; builds silently succeed with wrong deps.
+- **Fix**: Update lock files first, then let Nix build fail with the new hash; copy the "got" value into build.nix.
+
+### ❌ **Not Verifying Reproducibility**
+- **Pitfall**: Assuming builds are reproducible without testing—hidden non-determinism (timestamps, random UUIDs) only surfaces in PCR mismatches post-deployment.
+- **Fix**: Build twice from the same source and compare hashes: `shasum -a 256 image-run1.tar.gz image-run2.tar.gz`; hashes must match exactly.
+
+### ❌ **Cross-Platform Builds**
+- **Pitfall**: Attempting to build ARM64 images on x86_64 (or vice versa) without explicit architecture flags leads to wrong binaries and PCR chaos.
+- **Fix**: Build per-architecture (arm64/amd64) using `./nix.sh build-<impl>-arm64` or `./nix.sh build-<impl>-arm64`; match build arch to deployment arch.
+
+### ❌ **Environment Variables / Timestamps in Builds**
+- **Pitfall**: Build system captures date, user, or env vars → identical source → different binaries.
+- **Fix**: Nix and Docker already strip these; ensure no custom build steps inject timestamps or env-specific data.
+
+### ❌ **Forgetting to Commit Lock Files**
+- **Pitfall**: Lock files in .gitignore; team rebuilds and gets different images (different PCRs, deploy breaks).
+- **Fix**: Commit Cargo.lock, package-lock.json, and flake.lock to version control so all builds use identical dependencies.
+
+### ✅ **Best Practices**
+- Use **Nix flakes** for pure, hermetic builds with locked dependencies.
+- Verify reproducibility early and often; catch non-determinism before deployment.
+- Use **digests** (not tags) for content-addressed images.
+- Keep **lock files** in git; treat them as part of the source.
+- Build **per-architecture** if native code is involved; document architecture assumptions.
+- Document any per-arch hashes (e.g., in docker-compose.yml comments) to reduce confusion.
 
 ## Resources
 

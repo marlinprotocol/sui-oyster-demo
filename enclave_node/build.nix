@@ -1,4 +1,4 @@
-{ pkgs, version }:
+{ pkgs, version, arch ? "amd64" }:
 
 let
   # Use Node 20 for stability
@@ -41,8 +41,8 @@ in rec {
   inherit app nodejs;
 
   docker = pkgs.dockerTools.buildImage {
-    name = "sui-price-oracle-node";
-    tag = "node-reproducible-latest";
+    name = "sui-price-oracle";
+    tag = "node-reproducible-${arch}";
     copyToRoot = pkgs.buildEnv {
       name = "image-root";
       paths = [ nodejs app ];

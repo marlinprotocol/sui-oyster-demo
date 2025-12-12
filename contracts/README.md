@@ -121,7 +121,7 @@ sui client call \
 curl http://<ENCLAVE_IP>:1301/attestation/hex
 
 # Register it on-chain
-sh register_enclave.sh \
+sh script/register_enclave.sh \
     <ENCLAVE_PACKAGE_ID> \
     <APP_PACKAGE_ID> \
     <ENCLAVE_CONFIG_ID> \

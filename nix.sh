@@ -83,7 +83,7 @@ case "${1:-}" in
             ${NIX_IMAGE} \
             sh -c "git config --global --add safe.directory /workspace && nix build --system x86_64-linux .#rust-amd64 && cat result > /workspace/rust-amd64-image.tar.gz"
         print_success "Build complete: rust-amd64-image.tar.gz"
-        print_info "Load with: docker load < rust-amd64-image.tar.gz"
+        print_info "Load with: docker load < ./rust-amd64-image.tar.gz"
         ;;
     
     build-rust-arm64)
@@ -94,7 +94,7 @@ case "${1:-}" in
             ${NIX_IMAGE} \
             sh -c "git config --global --add safe.directory /workspace && nix build --system aarch64-linux .#rust-arm64 && cat result > /workspace/rust-arm64-image.tar.gz"
         print_success "Build complete: rust-arm64-image.tar.gz"
-        print_info "Load with: docker load < rust-arm64-image.tar.gz"
+        print_info "Load with: docker load < ./rust-arm64-image.tar.gz"
         ;;
     
     build-python-amd64)
@@ -105,7 +105,7 @@ case "${1:-}" in
             ${NIX_IMAGE} \
             sh -c "git config --global --add safe.directory /workspace && nix build --system x86_64-linux .#python-amd64 && cat result > /workspace/python-amd64-image.tar.gz"
         print_success "Build complete: python-amd64-image.tar.gz"
-        print_info "Load with: docker load < python-amd64-image.tar.gz"
+        print_info "Load with: docker load < ./python-amd64-image.tar.gz"
         ;;
     
     build-python-arm64)
@@ -116,7 +116,7 @@ case "${1:-}" in
             ${NIX_IMAGE} \
             sh -c "git config --global --add safe.directory /workspace && nix build --system aarch64-linux .#python-arm64 && cat result > /workspace/python-arm64-image.tar.gz"
         print_success "Build complete: python-arm64-image.tar.gz"
-        print_info "Load with: docker load < python-arm64-image.tar.gz"
+        print_info "Load with: docker load < ./python-arm64-image.tar.gz"
         ;;
     
     build-node-amd64)
@@ -127,7 +127,7 @@ case "${1:-}" in
             ${NIX_IMAGE} \
             sh -c "git config --global --add safe.directory /workspace && nix build --system x86_64-linux .#node-amd64 && cat result > /workspace/node-amd64-image.tar.gz"
         print_success "Build complete: node-amd64-image.tar.gz"
-        print_info "Load with: docker load < node-amd64-image.tar.gz"
+        print_info "Load with: docker load < ./node-amd64-image.tar.gz"
         ;;
     build-node-arm64)
         check_docker
@@ -137,7 +137,7 @@ case "${1:-}" in
             ${NIX_IMAGE} \
             sh -c "git config --global --add safe.directory /workspace && nix build --system aarch64-linux .#node-arm64 && cat result > /workspace/node-arm64-image.tar.gz"
         print_success "Build complete: node-arm64-image.tar.gz"
-        print_info "Load with: docker load < node-arm64-image.tar.gz"
+        print_info "Load with: docker load < ./node-arm64-image.tar.gz"
         ;;
     
     build-all)

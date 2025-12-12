@@ -1,4 +1,4 @@
-{ pkgs, version }:
+{ pkgs, version, arch ? "amd64" }:
 
 let
   # Filter source to only include necessary files for reproducibility
@@ -33,8 +33,8 @@ in rec {
   inherit app pythonEnv;
 
   docker = pkgs.dockerTools.buildImage {
-    name = "sui-price-oracle-python";
-    tag = "python-reproducible-latest";
+    name = "sui-price-oracle";
+    tag = "python-reproducible-${arch}";
     copyToRoot = pkgs.buildEnv {
       name = "image-root";
       paths = [ pythonEnv app ];

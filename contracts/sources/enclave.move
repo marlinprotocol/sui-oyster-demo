@@ -21,7 +21,7 @@ const EInvalidSignature: u64 = 5;
 
 // Expected public key lengths for secp256k1
 const SECP256K1_PK_LENGTH_COMPRESSED: u64 = 33;
-const SECP256K1_PK_LENGTH_UNCOMPRESSED: u64 = 65;
+const SECP256K1_PK_LENGTH_UNCOMPRESSED: u64 = 64;
 
 // PCR0: Enclave image file
 // PCR1: Enclave Kernel
@@ -220,7 +220,29 @@ fun compress_secp256k1_pubkey(uncompressed: &vector<u8>): vector<u8> {
 
 fun to_pcrs(document: &NitroAttestationDocument): Pcrs {
     let pcrs = document.pcrs();
-    Pcrs(*pcrs[0].value(), *pcrs[1].value(), *pcrs[2].value(), *pcrs[16].value())
+
+    let mut pcr0 = vector::empty<u8>();
+    let mut pcr1 = vector::empty<u8>();
+    let mut pcr2 = vector::empty<u8>();
+    let mut pcr16 = vector::empty<u8>();
+
+    let mut i = 0;
+    while (i < pcrs.length()) {
+        let entry = &pcrs[i];
+        let idx = entry.index();
+        if (idx == 0) {
+            pcr0 = *entry.value();
+        } else if (idx == 1) {
+            pcr1 = *entry.value();
+        } else if (idx == 2) {
+            pcr2 = *entry.value();
+        } else if (idx == 16) {
+            pcr16 = *entry.value();
+        };
+        i = i + 1;
+    };
+
+    Pcrs(pcr0, pcr1, pcr2, pcr16)
 }
 
 fun create_intent_message<P: drop>(intent: u8, timestamp_ms: u64, payload: P): IntentMessage<P> {

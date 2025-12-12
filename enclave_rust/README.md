@@ -11,18 +11,18 @@ docker run -v $(pwd)/keys/ecdsa.sec:/app/ecdsa.sec:ro -p 3000:3000 sui-oracle-ru
 
 # Or build reproducibly with Nix (pick your architecture)
 cd ..
-./nix.sh build-rust-amd64   # or build-rust-arm64
-docker load < rust-amd64-image.tar.gz
+./nix.sh build-rust-arm64   # or build-rust-amd64
+docker load < ./rust-arm64-image.tar.gz
 ```
 
 ### Deploy with Oyster (example)
 
 ```bash
-docker tag sui-price-oracle:rust-reproducible-latest <registry>/sui-price-oracle:rust-reproducible-latest
-docker push <registry>/sui-price-oracle:rust-reproducible-latest
+docker tag sui-price-oracle:rust-reproducible-arm64 <registry>/sui-price-oracle:rust-reproducible-arm64
+docker push <registry>/sui-price-oracle:rust-reproducible-arm64
 
 # Capture digest and update compose to use it (not a tag)
-DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' <registry>/sui-price-oracle:rust-reproducible-latest)
+DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' <registry>/sui-price-oracle:rust-reproducible-arm64)
 sed -i '' "s@^\s*image: .*@    image: ${DIGEST}@" ./docker-compose.yml
 
 oyster-cvm deploy \

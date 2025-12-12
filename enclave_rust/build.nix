@@ -1,4 +1,4 @@
-{ pkgs, version, fenix, naersk, system, rust_target }:
+{ pkgs, version, fenix, naersk, system, rust_target, arch ? "amd64" }:
 
 let
   # Setup Rust toolchain with fenix
@@ -58,7 +58,7 @@ in rec {
   
   docker = pkgs.dockerTools.buildImage {
     name = "sui-price-oracle";
-    tag = "rust-reproducible-latest";
+    tag = "rust-reproducible-${arch}";
     copyToRoot = pkgs.buildEnv {
       name = "image-root";
       paths = [ compressed ];

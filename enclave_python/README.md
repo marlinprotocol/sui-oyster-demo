@@ -11,23 +11,24 @@ docker run -p 3000:3000 sui-oracle-python
 
 # Or build reproducibly with Nix (pick your architecture)
 cd ..
-./nix.sh build-python-amd64   # or build-python-arm64
-docker load < python-amd64-image.tar.gz
+./nix.sh build-python-arm64   # or build-python-amd64
+docker load < ./python-arm64-image.tar.gz
 ```
 
 ### Deploy with Oyster (example)
 
 ```bash
-docker tag sui-price-oracle:python-reproducible-latest <registry>/sui-price-oracle:python-reproducible-latest
-docker push <registry>/sui-price-oracle:python-reproducible-latest
+docker tag sui-price-oracle:python-reproducible-arm64 <registry>/sui-price-oracle:python-reproducible-arm64
+docker push <registry>/sui-price-oracle:python-reproducible-arm64
 
 # Capture digest and update compose to use it (not a tag)
-DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' <registry>/sui-price-oracle:python-reproducible-latest)
+DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' <registry>/sui-price-oracle:python-reproducible-arm64)
 sed -i '' "s@^\s*image: .*@    image: ${DIGEST}@" ./docker-compose.yml
 
 oyster-cvm deploy \
 	--wallet-private-key $PRIVATE_KEY \
 	--docker-compose ./docker-compose.yml \
+    --instance-type c6g.xlarge \
 	--duration-in-minutes 60
 ```
 

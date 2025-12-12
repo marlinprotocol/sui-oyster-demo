@@ -55,14 +55,17 @@
             inherit version fenix naersk system;
             pkgs = target.pkgs;
             rust_target = target.rust_target;
+            arch = targetName;
           };
           pythonBuild = import ./enclave_python/build.nix { 
             inherit version;
             pkgs = target.pkgs;
+            arch = targetName;
           };
           nodeBuild = import ./enclave_node/build.nix {
             inherit version;
             pkgs = target.pkgs;
+            arch = targetName;
           };
         in
         {
