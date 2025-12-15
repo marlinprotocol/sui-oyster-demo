@@ -40,6 +40,17 @@ check_docker() {
         echo "Please start Docker and try again"
         exit 1
     fi
+
+    # Recommend Docker 29+ so hashes remain stable when running `docker load` (containerd storage)
+    server_version=$(docker version --format '{{.Server.Version}}' 2>/dev/null || true)
+    if [[ -n "$server_version" ]]; then
+        server_major=${server_version%%.*}
+        if [[ "$server_major" -lt 29 ]]; then
+            print_info "Docker >=29 recommended for stable image hashes on docker load (detected ${server_version}). Builds still run, but digests may differ after load."
+        fi
+    else
+        print_info "Unable to detect Docker version; Docker 29+ recommended for stable image hashes on docker load."
+    fi
 }
 
 run_nix() {

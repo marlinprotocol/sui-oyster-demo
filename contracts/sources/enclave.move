@@ -267,7 +267,6 @@ public struct SigningPayload has copy, drop {
 
 #[test]
 fun test_serde() {
-    // serialization should be consistent with rust test see `fn test_serde` in `src/nautilus-server/app.rs`.
     let scope = 0;
     let timestamp = 1744038900000;
     let signing_payload = create_intent_message(

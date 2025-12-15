@@ -75,7 +75,7 @@ This project demonstrates how to build a secure price oracle using:
 ### Prerequisites
 
 - **Sui CLI**: `cargo install --git https://github.com/MystenLabs/sui.git --branch main sui`
-- **Docker**: For building enclave images
+- **Docker**: For building enclave images; **29+ recommended** so image digests remain stable after `docker load` (older Docker may alter hashes on load, builds still work)
 - **Oyster CLI**: `npm install -g @marlinprotocol/oyster-cvm-cli`
 - **Wallet**: With SUI tokens for gas fees
 
@@ -332,6 +332,10 @@ When building reproducible enclave images, avoid these common gotchas:
 ### ❌ **Native/Compiled Dependencies**
 - **Pitfall**: Using native modules (e.g., original secp256k1, node-gyp) breaks reproducibility across architectures.
 - **Fix**: Prefer pure-language implementations (@noble/secp256k1 for JS, libsodium for bindings, etc.) or accept per-architecture builds.
+
+### ❌ **Old Docker Versions (overlay2 vs containerd)**
+- **Pitfall**: Docker <29 may produce different digests when loading images (`docker load`) due to storage backend differences. Build output is fine; hashes can shift only after load.
+- **Fix**: Use Docker 29+ when you need stable digests after `docker load`.
 
 ### ❌ **Using Tags Instead of Digests**
 - **Pitfall**: Docker tags (`:latest`, `:v1.0`) move and don't guarantee content—digest mismatches lead to PCR failures.
