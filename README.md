@@ -76,7 +76,7 @@ This project demonstrates how to build a secure price oracle using:
 
 - **Sui CLI**: `cargo install --git https://github.com/MystenLabs/sui.git --branch main sui`
 - **Docker**: For building enclave images; **29+ recommended** so image digests remain stable after `docker load` (older Docker may alter hashes on load, builds still work)
-- **Oyster CLI**: `npm install -g @marlinprotocol/oyster-cvm-cli`
+- **Oyster CLI**: https://docs.marlin.org/oyster/build-cvm/tutorials/setup#install-the-oyster-cvm-cli-tool
 - **Wallet**: With SUI tokens for gas fees
 
 ### Step 1: Deploy Smart Contracts
