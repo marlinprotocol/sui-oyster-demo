@@ -28,7 +28,9 @@ sed -i '' "s@^\s*image: .*@    image: ${DIGEST}@" ./docker-compose.yml
 oyster-cvm deploy \
 	--wallet-private-key $PRIVATE_KEY \
 	--docker-compose ./docker-compose.yml \
-	--duration-in-minutes 60
+    --instance-type c6g.xlarge \
+	--duration-in-minutes 60 \
+	--deployment sui
 ```
 
 **See the main [README.md](../README.md) for complete documentation including deployment, API reference, and integration.**

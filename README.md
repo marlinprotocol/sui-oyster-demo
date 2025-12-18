@@ -120,7 +120,8 @@ oyster-cvm deploy \
   --wallet-private-key $PRIVATE_KEY \
   --docker-compose ./enclave_rust/docker-compose.yml \
   --instance-type c6g.xlarge \
-  --duration-in-minutes 60
+  --duration-in-minutes 60 \
+  --deployment sui
 # Save PUBLIC_IP from output
 # For Node/Python, adjust the tag/push, update the compose image to the digest, and use ./enclave_node or ./enclave_python compose files
 ```
