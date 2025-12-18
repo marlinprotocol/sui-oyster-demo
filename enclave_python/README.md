@@ -18,6 +18,7 @@ docker load < ./python-arm64-image.tar.gz
 ### Deploy with Oyster (example)
 
 ```bash
+# Replace <registry> with your docker hub username
 docker tag sui-price-oracle:python-reproducible-arm64 <registry>/sui-price-oracle:python-reproducible-arm64
 docker push <registry>/sui-price-oracle:python-reproducible-arm64
 

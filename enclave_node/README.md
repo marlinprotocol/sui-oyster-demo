@@ -27,7 +27,7 @@ docker load < ./node-arm64-image.tar.gz
 ### Deploy with Oyster (example)
 
 ```bash
-# After building and loading
+# Replace <registry> with your docker hub username
 docker tag sui-price-oracle:node-reproducible-arm64 <registry>/sui-price-oracle:node-reproducible-arm64
 docker push <registry>/sui-price-oracle:node-reproducible-arm64
 

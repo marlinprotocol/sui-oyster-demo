@@ -74,10 +74,10 @@ This project demonstrates how to build a secure price oracle using:
 
 ### Prerequisites
 
-- **Sui CLI**: `cargo install --git https://github.com/MystenLabs/sui.git --branch main sui`
+- **Sui CLI**: [docs](https://docs.sui.io/guides/developer/getting-started/sui-install#quick-install)
 - **Docker**: For building enclave images; **29+ recommended** so image digests remain stable after `docker load` (older Docker may alter hashes on load, builds still work)
-- **Oyster CLI**: https://docs.marlin.org/oyster/build-cvm/tutorials/setup#install-the-oyster-cvm-cli-tool
-- **Wallet**: With SUI tokens for gas fees
+- **Oyster CLI**: [docs](https://docs.marlin.org/oyster/build-cvm/tutorials/setup#install-the-oyster-cvm-cli-tool)
+- **Wallet**: With SUI tokens for gas fees and USDC for enclave deployments
 
 ### Step 1: Deploy Smart Contracts
 
@@ -108,14 +108,18 @@ Pick an implementation and target architecture, then build reproducibly with Nix
 
 docker load < ./rust-arm64-image.tar.gz   # example for Rust/arm64
 # Tag/push (example for Rust/arm64)
+# Replace <registry> with your docker hub username
 docker tag sui-price-oracle:rust-reproducible-arm64 <registry>/sui-price-oracle:rust-reproducible-arm64
 docker push <registry>/sui-price-oracle:rust-reproducible-arm64
 
 # Get the pushed digest and update compose (per architecture)
 DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' <registry>/sui-price-oracle:rust-reproducible-arm64)
+# Update the image with it's sha256 in docker-compose.yml
 sed -i '' "s@^\s*image: .*@    image: ${DIGEST}@" enclave_rust/docker-compose.yml
 
 # Deploy with Oyster (point docker-compose to your pushed image/digest)
+# export the PRIVATE_KEY with Sui and USDC used for deployments
+export PRIVATE_KEY="suiprivkey......."
 oyster-cvm deploy \
   --wallet-private-key $PRIVATE_KEY \
   --docker-compose ./enclave_rust/docker-compose.yml \
@@ -342,10 +346,6 @@ When building reproducible enclave images, avoid these common gotchas:
 - **Pitfall**: Docker tags (`:latest`, `:v1.0`) move and don't guarantee content—digest mismatches lead to PCR failures.
 - **Fix**: Always use image digests (`sha256:abc...`) in docker-compose.yml; capture with `docker inspect --format='{{index .RepoDigests 0}}'` after pushing.
 
-### ❌ **Loose or Missing Lock Files**
-- **Pitfall**: Unlocked dependencies (package.json without package-lock.json, Cargo.toml without Cargo.lock) drift over time → different binaries.
-- **Fix**: Commit lock files (Cargo.lock, package-lock.json) and requirements.txt; use npmDepsHash (or equivalent) to guard against drift.
-
 ### ❌ **Modifying Dependencies Without Updating Hashes**
 - **Pitfall**: Changing package.json/Cargo.toml but forgetting to update npmDepsHash or Cargo.lock; builds silently succeed with wrong deps.
 - **Fix**: Update lock files first, then let Nix build fail with the new hash; copy the "got" value into build.nix.
@@ -354,25 +354,15 @@ When building reproducible enclave images, avoid these common gotchas:
 - **Pitfall**: Assuming builds are reproducible without testing—hidden non-determinism (timestamps, random UUIDs) only surfaces in PCR mismatches post-deployment.
 - **Fix**: Build twice from the same source and compare hashes: `shasum -a 256 image-run1.tar.gz image-run2.tar.gz`; hashes must match exactly.
 
-### ❌ **Cross-Platform Builds**
-- **Pitfall**: Attempting to build ARM64 images on x86_64 (or vice versa) without explicit architecture flags leads to wrong binaries and PCR chaos.
-- **Fix**: Build per-architecture (arm64/amd64) using `./nix.sh build-<impl>-arm64` or `./nix.sh build-<impl>-arm64`; match build arch to deployment arch.
-
-### ❌ **Environment Variables / Timestamps in Builds**
-- **Pitfall**: Build system captures date, user, or env vars → identical source → different binaries.
-- **Fix**: Nix and Docker already strip these; ensure no custom build steps inject timestamps or env-specific data.
-
 ### ❌ **Forgetting to Commit Lock Files**
-- **Pitfall**: Lock files in .gitignore; team rebuilds and gets different images (different PCRs, deploy breaks).
+- **Pitfall**: Lock files in .gitignore; rebuild and gets different images (different PCRs, deploy breaks).
 - **Fix**: Commit Cargo.lock, package-lock.json, and flake.lock to version control so all builds use identical dependencies.
 
 ### ✅ **Best Practices**
-- Use **Nix flakes** for pure, hermetic builds with locked dependencies.
 - Verify reproducibility early and often; catch non-determinism before deployment.
 - Use **digests** (not tags) for content-addressed images.
 - Keep **lock files** in git; treat them as part of the source.
-- Build **per-architecture** if native code is involved; document architecture assumptions.
-- Document any per-arch hashes (e.g., in docker-compose.yml comments) to reduce confusion.
+- Build **per-architecture** if native code is involved.
 
 ## Resources
 
