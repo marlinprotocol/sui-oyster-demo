@@ -151,7 +151,7 @@ sui client call \
   --gas-budget 10000000
 
 # Register enclave
-sh register_enclave.sh \
+sh contracts/script/register_enclave.sh \
   <ENCLAVE_PACKAGE_ID> \
   <PACKAGE_ID> \
   <ENCLAVE_CONFIG_ID> \
