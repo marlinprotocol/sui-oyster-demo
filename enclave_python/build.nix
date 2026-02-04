@@ -15,7 +15,7 @@ let
   };
 
   # Python runtime with pinned dependencies from nixpkgs
-  pythonEnv = pkgs.python3.withPackages (ps: [ ps.flask ps.requests ps.ecdsa ]);
+  pythonEnv = pkgs.python3.withPackages (ps: [ ps.flask ps.requests ps.coincurve ]);
 
   # Install the application sources into /app
   app = pkgs.stdenv.mkDerivation {

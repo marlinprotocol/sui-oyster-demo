@@ -3,9 +3,9 @@ version: '3.8'
 services:
   sui-price-oracle:
     # the hash is dependent on the architecture for which docker image is built
-    # for arm64 use: sha256:6ed2bddae6cf577e83bcafd5c7c83d905451cccd2f8597eb685a75204c6c133c
-    # for amd64 use: sha256:b321151316438a9e16b6efaaa7cd8c61641a7f7e9ba2a28e3d14081ae3617f0d
-    image: prored/sui-price-oracle@sha256:6ed2bddae6cf577e83bcafd5c7c83d905451cccd2f8597eb685a75204c6c133c
+    # for arm64 use: sha256:ad90319780587dca4de6116b76e417c2f949f326d2fcc57262607ac4dfc02a62
+    # for amd64 use: sha256:
+    image: prored/sui-price-oracle@sha256:ad90319780587dca4de6116b76e417c2f949f326d2fcc57262607ac4dfc02a62
     container_name: sui-price-oracle
     restart: unless-stopped
     init: true
