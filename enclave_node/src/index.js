@@ -42,7 +42,11 @@ async function fetchSuiPrice() {
   const url = 'https://api.coingecko.com/api/v3/simple/price?ids=sui&vs_currencies=usd';
   
   try {
-    const response = await httpClient.get(url);
+    const response = await httpClient.get(url, {
+      headers: {
+        'User-Agent': 'SUI-Price-Oracle/1.0'
+      }
+    });
     return response.data.sui.usd;
   } catch (error) {
     console.error('Failed to fetch SUI price:', error.message);
@@ -80,7 +84,7 @@ function signPriceData(privateKey, price, timestampMs) {
   const hash = createHash('sha256').update(messageBytes).digest();
   
   // Sign with secp256k1
-  const signature = sign(hash, privateKey);
+  const signature = sign(hash, privateKey, { prehash: false });
   
   // Return hex-encoded compact signature (64 bytes: r + s)
   return Buffer.from(signature).toString('hex');

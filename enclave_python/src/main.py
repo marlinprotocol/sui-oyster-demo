@@ -14,14 +14,13 @@ from typing import Dict, Any
 from flask import Flask, jsonify
 import requests
 import hashlib
-from ecdsa import SigningKey, SECP256k1
-from ecdsa.util import sigencode_string
+from coincurve import PrivateKey
 
 # Initialize Flask app
 app = Flask(__name__)
 
 # Global state
-signing_key: SigningKey = None
+signing_key: PrivateKey = None
 http_session = requests.Session()
 
 # Intent scope constant (0 for personal intent)
@@ -33,7 +32,8 @@ def fetch_sui_price() -> float:
     url = "https://api.coingecko.com/api/v3/simple/price?ids=sui&vs_currencies=usd"
     
     try:
-        response = http_session.get(url, timeout=10)
+        headers = {'User-Agent': 'SUI-Price-Oracle/1.0'}
+        response = http_session.get(url, headers=headers, timeout=10)
         response.raise_for_status()
         data = response.json()
         return data["sui"]["usd"]
@@ -82,7 +82,7 @@ def serialize_intent_message(intent: int, timestamp_ms: int, payload_bytes: byte
     return bytes(result)
 
 
-def sign_price_data(private_key: SigningKey, price: int, timestamp_ms: int) -> str:
+def sign_price_data(private_key: PrivateKey, price: int, timestamp_ms: int) -> str:
     """
     Sign price data following Nautilus pattern using secp256k1.
     
@@ -104,18 +104,17 @@ def sign_price_data(private_key: SigningKey, price: int, timestamp_ms: int) -> s
     message_hash = hashlib.sha256(message_bytes).digest()
     
     # Sign with secp256k1 using deterministic nonce (RFC 6979)
-    # sigencode_string returns raw (r, s) as 64 bytes which matches Rust/Node.js compact format
-    signature = private_key.sign_digest_deterministic(
-        message_hash, 
-        hashfunc=hashlib.sha256,
-        sigencode=sigencode_string
-    )
+    # coincurve automatically handles low-s normalization
+    # sign_recoverable returns 65 bytes (64-byte signature + 1-byte recovery ID)
+    signature_with_recovery = private_key.sign_recoverable(message_hash, hasher=None)
+    # Extract just the 64-byte compact signature (r + s), excluding recovery ID
+    signature = signature_with_recovery[:64]
     
     # Return hex-encoded signature (64 bytes compact format)
     return signature.hex()
 
 
-def load_signing_key_from_file(path: Path) -> SigningKey:
+def load_signing_key_from_file(path: Path) -> PrivateKey:
     """Load secp256k1 signing key from file."""
     key_bytes = path.read_bytes()
     
@@ -123,7 +122,7 @@ def load_signing_key_from_file(path: Path) -> SigningKey:
     if len(key_bytes) != 32:
         raise ValueError(f"Expected 32-byte secp256k1 private key, got {len(key_bytes)} bytes")
     
-    return SigningKey.from_string(key_bytes, curve=SECP256k1)
+    return PrivateKey(key_bytes)
 
 
 @app.route("/health", methods=["GET"])
@@ -135,9 +134,8 @@ def health_check():
 @app.route("/public-key", methods=["GET"])
 def get_public_key():
     """Get the enclave's secp256k1 public key (33 bytes compressed)."""
-    verifying_key = signing_key.get_verifying_key()
     # Get compressed public key (33 bytes: 0x02/0x03 + x coordinate)
-    pk_hex = verifying_key.to_string('compressed').hex()
+    pk_hex = signing_key.public_key.format(compressed=True).hex()
     
     return jsonify({
         "public_key": pk_hex
@@ -192,8 +190,7 @@ def main():
     print("Signing key loaded successfully")
     
     # Log public key for reference
-    verifying_key = signing_key.get_verifying_key()
-    pk_hex = verifying_key.to_string('compressed').hex()
+    pk_hex = signing_key.public_key.format(compressed=True).hex()
     print(f"Public key (hex): {pk_hex}")
     
     # Start server

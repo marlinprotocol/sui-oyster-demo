@@ -61,6 +61,7 @@ async fn fetch_sui_price(http_client: &reqwest::Client) -> Result<f64, anyhow::E
     
     let response = http_client
         .get(url)
+        .header("User-Agent", "SUI-Price-Oracle/1.0")
         .send()
         .await?
         .json::<CoinGeckoResponse>()
