@@ -1,9 +1,8 @@
 [package]
-name = "oyster_demo"
+name = "enclave_registry"
 edition = "2024.beta"
 
 [dependencies]
 
 [addresses]
-oyster_demo = "0x0"
-enclave = "0x0"
+enclave_registry = "0x0"

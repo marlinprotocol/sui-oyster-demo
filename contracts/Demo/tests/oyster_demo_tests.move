@@ -2,7 +2,7 @@
 module oyster_demo::oyster_demo_tests;
 
 use sui::test_scenario::{Self as ts};
-use enclave::enclave;
+use enclave_registry::enclave_registry;
 use oyster_demo::oyster_demo;
 
 const ADMIN: address = @0x1;
@@ -35,16 +35,16 @@ fun test_registry_creation() {
     // Create registry via enclave init
     ts::next_tx(&mut scenario, ADMIN);
     {
-        enclave::init_for_testing(ts::ctx(&mut scenario));
+        enclave_registry::init_for_testing(ts::ctx(&mut scenario));
     };
 
     // Verify the registry was created and shared
     ts::next_tx(&mut scenario, ADMIN);
     {
-        let registry = ts::take_shared<enclave::EnclaveRegistry>(&scenario);
+        let registry = ts::take_shared<enclave_registry::Registry>(&scenario);
         // Registry should be empty initially
         let dummy_pk = x"020000000000000000000000000000000000000000000000000000000000000000";
-        assert!(!enclave::is_registered(&registry, &dummy_pk));
+        assert!(!enclave_registry::is_registered(&registry, &dummy_pk));
         ts::return_shared(registry);
     };
 
@@ -58,10 +58,10 @@ fun test_pcrs_construction() {
     let pcr2 = x"cc";
     let pcr16 = x"dd";
 
-    let pcrs = enclave::new_pcrs(pcr0, pcr1, pcr2, pcr16);
+    let pcrs = enclave_registry::new_pcrs(pcr0, pcr1, pcr2, pcr16);
 
-    assert!(*enclave::pcr_0(&pcrs) == x"aa");
-    assert!(*enclave::pcr_1(&pcrs) == x"bb");
-    assert!(*enclave::pcr_2(&pcrs) == x"cc");
-    assert!(*enclave::pcr_16(&pcrs) == x"dd");
+    assert!(*enclave_registry::pcr_0(&pcrs) == x"aa");
+    assert!(*enclave_registry::pcr_1(&pcrs) == x"bb");
+    assert!(*enclave_registry::pcr_2(&pcrs) == x"cc");
+    assert!(*enclave_registry::pcr_16(&pcrs) == x"dd");
 }

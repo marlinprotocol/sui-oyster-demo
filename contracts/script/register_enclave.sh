@@ -45,5 +45,5 @@ echo 'converted attestation'
 sui client ptb --assign v "vector$ATTESTATION_ARRAY" \
     --move-call "0x2::nitro_attestation::load_nitro_attestation" v @0x6 \
     --assign result \
-    --move-call "${PACKAGE_ID}::enclave::register_enclave" @${REGISTRY_ID} result \
+    --move-call "${PACKAGE_ID}::enclave_registry::register_enclave" @${REGISTRY_ID} result \
     --gas-budget 100000000

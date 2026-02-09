@@ -5,8 +5,8 @@ A decentralized price oracle for SUI token that uses AWS Nitro Enclaves (via Oys
 ## Overview
 
 This project demonstrates how to build a secure price oracle using:
-- **Enclave Key Registry** (`enclave.move`): A shared on-chain registry that maps verified enclave public keys to their PCR values. It is application-independent and can be used by any application.
-- **Price Oracle** (`oyster_demo.move`): An application that consumes the registry to verify enclave signatures, check PCRs, and store SUI token prices on-chain.
+- **Enclave Key Registry** (`enclave_registry.move`): A shared on-chain registry that maps verified enclave public keys to their PCR values. It is application-independent and can be used by any application. Deployed as a separate package.
+- **Price Oracle** (`oyster_demo.move`): An application that consumes the registry to verify enclave signatures, check PCRs, and store SUI token prices on-chain. Deployed as a separate package that depends on the registry.
 - **AWS Nitro Enclaves**: Hardware-isolated execution via Oyster deployment
 - **secp256k1 Signatures**: Cryptographic proof that prices come from authorized enclaves
 - **PCR Attestation**: Verifies the exact enclave code running
@@ -54,13 +54,20 @@ This project demonstrates how to build a secure price oracle using:
 ```
 .
 ├── contracts/              # Sui Move smart contracts
-│   ├── sources/
-│   │   ├── enclave.move       # Shared enclave key registry (generic)
-│   │   └── oyster_demo.move   # Price oracle application (uses registry)
+│   ├── EnclaveRegistry/       # Enclave key registry package (generic)
+│   │   ├── Move.toml
+│   │   └── sources/
+│   │       └── enclave_registry.move
+│   ├── Demo/                  # Price oracle application package
+│   │   ├── Move.toml
+│   │   ├── sources/
+│   │   │   └── oyster_demo.move
+│   │   └── tests/
+│   │       └── oyster_demo_tests.move
 │   ├── script/            # Helper scripts for deployment
 │   │   ├── register_enclave.sh
 │   │   ├── update_price.sh
-│   │   ├── get_price.sh
+│   │   └── get_price.sh
 │   └── README.md          # Contract deployment guide
 │
 ├── enclave_rust/          # Rust enclave server
@@ -126,7 +133,7 @@ See the language-specific READMEs for deployment details.
 
 ### Step 2: Register Enclave in Registry
 
-The enclave registry (`enclave.move`) is a shared, application-independent contract that stores verified (public_key -> PCRs) mappings. Assuming the registry is already deployed, register your enclave:
+The enclave registry (`enclave_registry.move`) is a shared, application-independent contract that stores verified (public_key -> PCRs) mappings. Assuming the registry is already deployed, register your enclave:
 
 ```bash
 # Register enclave (verifies attestation, stores public key + PCRs in registry)
@@ -217,7 +224,7 @@ If both imageId values match, you have cryptographic proof that the deployed enc
 With the enclave registered in the registry, deploy the application contract that will consume the registry data.
 
 ```bash
-cd contracts
+cd contracts/Demo
 
 # Build and publish
 sui move build
@@ -303,7 +310,7 @@ sh contracts/script/get_price.sh <PUBLIC_IP>
 
 ### Move Contract Functions
 
-#### Enclave Registry (`enclave::enclave`)
+#### Enclave Registry (`enclave_registry::enclave_registry`)
 
 A generic key-PCR store. Applications consume this data as they see fit.
 
@@ -340,7 +347,7 @@ sh contracts/script/update_price.sh <PUBLIC_IP> <PACKAGE_ID> <ORACLE_ID> <REGIST
 
 ### Unit Tests
 ```bash
-cd contracts
+cd contracts/Demo
 sui move test
 ```
 

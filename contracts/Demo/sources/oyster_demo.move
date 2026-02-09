@@ -8,7 +8,7 @@ use std::bcs;
 use sui::ecdsa_k1;
 use sui::table::{Self, Table};
 use sui::event;
-use enclave::enclave::{Self, EnclaveRegistry, Pcrs};
+use enclave_registry::enclave_registry::{Self, Registry, Pcrs};
 
 // Error codes
 const EInvalidSignature: u64 = 0;
@@ -66,7 +66,7 @@ fun init(ctx: &mut TxContext) {
         latest_price: 0,
         latest_timestamp: 0,
         // Placeholder PCR values - update after building your enclave
-        expected_pcrs: enclave::new_pcrs(
+        expected_pcrs: enclave_registry::new_pcrs(
             x"000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
             x"000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
             x"000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
@@ -94,7 +94,7 @@ entry fun update_expected_pcrs(
     pcr2: vector<u8>,
     pcr16: vector<u8>,
 ) {
-    oracle.expected_pcrs = enclave::new_pcrs(pcr0, pcr1, pcr2, pcr16);
+    oracle.expected_pcrs = enclave_registry::new_pcrs(pcr0, pcr1, pcr2, pcr16);
 }
 
 /// Entry function to update SUI price.
@@ -103,14 +103,14 @@ entry fun update_expected_pcrs(
 /// the price payload.
 entry fun update_sui_price(
     oracle: &mut PriceOracle,
-    registry: &EnclaveRegistry,
+    registry: &Registry,
     enclave_pk: vector<u8>,
     price: u64,
     timestamp_ms: u64,
     signature: vector<u8>,
 ) {
     // Look up the enclave's PCRs from the registry and check they match
-    let pcrs = enclave::get_pcrs(registry, &enclave_pk);
+    let pcrs = enclave_registry::get_pcrs(registry, &enclave_pk);
     assert!(*pcrs == oracle.expected_pcrs, EInvalidPCRs);
 
     // Verify secp256k1 signature over the intent message

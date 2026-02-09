@@ -7,7 +7,7 @@
 // and retrieve its PCR values, then use that data however they see fit
 // (e.g. verify signatures, check PCRs against expected values, etc.).
 
-module enclave::enclave;
+module enclave_registry::enclave_registry;
 
 use sui::nitro_attestation::NitroAttestationDocument;
 use sui::table::{Self, Table};
@@ -29,18 +29,18 @@ const SECP256K1_PK_LENGTH_UNCOMPRESSED: u64 = 64;
 public struct Pcrs(vector<u8>, vector<u8>, vector<u8>, vector<u8>) has copy, drop, store;
 
 // One-time witness for module initialization
-public struct ENCLAVE has drop {}
+public struct ENCLAVE_REGISTRY has drop {}
 
 // Shared registry mapping compressed secp256k1 public keys to their PCR values.
 // Entries are added only after attestation verification.
-public struct EnclaveRegistry has key {
+public struct Registry has key {
     id: UID,
     enclaves: Table<vector<u8>, Pcrs>,
 }
 
 /// Module initializer - creates the shared registry.
-fun init(_: ENCLAVE, ctx: &mut TxContext) {
-    let registry = EnclaveRegistry {
+fun init(_: ENCLAVE_REGISTRY, ctx: &mut TxContext) {
+    let registry = Registry {
         id: object::new(ctx),
         enclaves: table::new(ctx),
     };
@@ -62,7 +62,7 @@ public fun new_pcrs(
 /// and stores them in the shared registry table.
 /// Anyone can call this, but the attestation must be valid.
 public fun register_enclave(
-    registry: &mut EnclaveRegistry,
+    registry: &mut Registry,
     document: NitroAttestationDocument,
 ) {
     let pk = load_pk(&document);
@@ -73,12 +73,12 @@ public fun register_enclave(
 }
 
 /// Check if a public key is registered in the registry.
-public fun is_registered(registry: &EnclaveRegistry, pk: &vector<u8>): bool {
+public fun is_registered(registry: &Registry, pk: &vector<u8>): bool {
     table::contains(&registry.enclaves, *pk)
 }
 
 /// Get the PCR values for a registered public key.
-public fun get_pcrs(registry: &EnclaveRegistry, pk: &vector<u8>): &Pcrs {
+public fun get_pcrs(registry: &Registry, pk: &vector<u8>): &Pcrs {
     assert!(table::contains(&registry.enclaves, *pk), ENotRegistered);
     table::borrow(&registry.enclaves, *pk)
 }
@@ -160,5 +160,5 @@ fun to_pcrs(document: &NitroAttestationDocument): Pcrs {
 
 #[test_only]
 public fun init_for_testing(ctx: &mut TxContext) {
-    init(ENCLAVE {}, ctx);
+    init(ENCLAVE_REGISTRY {}, ctx);
 }

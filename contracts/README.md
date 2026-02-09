@@ -4,11 +4,11 @@ A Move smart contract that uses a shared enclave key registry for looking up ver
 
 ## Architecture
 
-### Enclave Key Registry (`enclave.move`)
+### Enclave Key Registry (`enclave_registry.move`)
 
-A generic, application-independent shared registry that stores verified enclave public keys and their PCR values. It is a pure data store -- applications consume registry data however they see fit (e.g. verify signatures, check PCRs, gate access).
+A generic, application-independent shared registry that stores verified enclave public keys and their PCR values. It is a pure data store -- applications consume registry data however they see fit (e.g. verify signatures, check PCRs, gate access). Deployed as its own package and is a shared registry any enclave can register with (`EnclaveRegistry/`).
 
-- **`EnclaveRegistry`**: Shared object containing a `Table<vector<u8>, Pcrs>` mapping compressed secp256k1 public keys to their PCR values
+- **`Registry`**: Shared object containing a `Table<vector<u8>, Pcrs>` mapping compressed secp256k1 public keys to their PCR values
 - **`register_enclave`**: Verifies a NitroAttestationDocument and stores the public key + PCRs in the registry
 - **`get_pcrs`**: Returns PCR values for a registered public key
 - **`is_registered`**: Checks if a public key exists in the registry
@@ -16,7 +16,7 @@ A generic, application-independent shared registry that stores verified enclave 
 
 ### Price Oracle (`oyster_demo.move`)
 
-A demo application that consumes the enclave registry. It implements its own trust logic:
+A demo application that consumes the enclave registry. It implements its own trust logic. Deployed as its own package (`Demo/`) that depends on `EnclaveRegistry/`. This module is specific to the application and contains:
 - Looks up an enclave's PCRs from the registry
 - Checks that the PCRs match the oracle's expected values
 - Verifies secp256k1 signatures over price payloads
@@ -38,7 +38,7 @@ Capability for the deployer to update expected PCR values.
 ```move
 entry fun update_sui_price(
     oracle: &mut PriceOracle,
-    registry: &EnclaveRegistry,
+    registry: &Registry,
     enclave_pk: vector<u8>,
     price: u64,
     timestamp_ms: u64,
@@ -95,6 +95,7 @@ This fetches the attestation from the enclave, verifies it on-chain, and stores 
 
 **Step 2: Publish the application package**
 ```bash
+cd Demo
 sui move build
 sui client publish --gas-budget 100000000 --with-unpublished-dependencies
 ```

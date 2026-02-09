@@ -1,6 +1,7 @@
 [testnet]
-package_id = "0x0" # modules - enclave, oyster_demo
-EnclaveRegistry = "0x0" # shared object from enclave::init
+enclave_registry_package_id = "0x0" # enclave_registry package
+oyster_demo_package_id = "0x0" # oyster_demo package
+Registry = "0x0" # shared object from enclave_registry::init
 PriceOracle = "0x0" # shared object from oyster_demo::init
 AdminCap = "0x0" # owned by deployer, for updating expected PCRs
 UpgradeCap = "0x0"

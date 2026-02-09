@@ -1,0 +1,9 @@
+[package]
+name = "oyster_demo"
+edition = "2024.beta"
+
+[dependencies]
+enclave_registry = { local = "../EnclaveRegistry" }
+
+[addresses]
+oyster_demo = "0x0"
