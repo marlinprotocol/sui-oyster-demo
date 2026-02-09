@@ -1,8 +1,8 @@
 [testnet]
-enclave_registry_package_id = "0x0" # enclave_registry package
+enclave_registry_package_id = "0xb5a9486ec59fd4355647f6e9fdce5ed282857d9673b8fe4f9cb777e224a163a2" # enclave_registry package
 oyster_demo_package_id = "0x0" # oyster_demo package
-Registry = "0x0" # shared object from enclave_registry::init
+Registry = "0x17b03ad8e91e3aab9b71890b40556af9664849b90c2fdb371df6f85fa457634b" # shared object from enclave_registry::init
 PriceOracle = "0x0" # shared object from oyster_demo::init
 AdminCap = "0x0" # owned by deployer, for updating expected PCRs
-UpgradeCap = "0x0"
+UpgradeCap_registry = "0xad106bda22790092457e6dc39d8ca91255e942e9735c2ccae1873e58cf821726"
 rpc_url = "https://fullnode.testnet.sui.io:443"
