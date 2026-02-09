@@ -1,58 +1,56 @@
-# SUI Token Price Oracle with Attestation Verification
+# SUI Token Price Oracle with Enclave Key Registry
 
-A Move smart contract that verifies attestations using the Oyster enclaves and stores SUI token prices with timestamp mapping. The oracle provides secure price updates verified through AWS Nitro Enclave attestations.
-
-## Features
-
-- ✅ **Attestation Verification**: Uses Oyster enclaves to generate signed price updates
-- ✅ **Timestamp Mapping**: Stores historical prices mapped by timestamp
-- ✅ **Latest Price Tracking**: Automatically tracks the most recent price update
-- ✅ **Public Accessibility**: Anyone can read prices, but only verified enclaves can update
-- ✅ **Event Emission**: Emits events for price updates and oracle creation
+A Move smart contract that uses a shared enclave key registry for looking up verified enclave public keys and their PCR values, then applies application-specific trust logic (signature verification, PCR matching) to store SUI token prices on-chain.
 
 ## Architecture
 
-### Core Structures
+### Enclave Key Registry (`enclave.move`)
 
-#### `PriceOracle<phantom T>`
+A generic, application-independent shared registry that stores verified enclave public keys and their PCR values. It is a pure data store -- applications consume registry data however they see fit (e.g. verify signatures, check PCRs, gate access).
+
+- **`EnclaveRegistry`**: Shared object containing a `Table<vector<u8>, Pcrs>` mapping compressed secp256k1 public keys to their PCR values
+- **`register_enclave`**: Verifies a NitroAttestationDocument and stores the public key + PCRs in the registry
+- **`get_pcrs`**: Returns PCR values for a registered public key
+- **`is_registered`**: Checks if a public key exists in the registry
+- **`new_pcrs`**: Constructs a Pcrs value from individual PCR vectors
+
+### Price Oracle (`oyster_demo.move`)
+
+A demo application that consumes the enclave registry. It implements its own trust logic:
+- Looks up an enclave's PCRs from the registry
+- Checks that the PCRs match the oracle's expected values
+- Verifies secp256k1 signatures over price payloads
+- Stores verified prices on-chain with timestamps
+
+#### `PriceOracle`
 The main oracle object that stores all price data:
 - `prices: Table<u64, u64>` - Maps timestamps to prices
 - `latest_price: u64` - The most recent price
 - `latest_timestamp: u64` - When the latest price was recorded
+- `expected_pcrs: Pcrs` - Expected PCR values for trusted enclaves
 
-#### `PriceUpdatePayload`
-The payload structure signed by the enclave:
-```move
-public struct PriceUpdatePayload has copy, drop {
-    price: u64,  // Price in smallest unit (with 10^6 multiplier)
-}
-```
-
-Note: The timestamp is part of the `IntentMessage` wrapper, not the payload itself.
+#### `AdminCap`
+Capability for the deployer to update expected PCR values.
 
 ### Key Functions
 
-#### Initialization
+#### Update Price (Requires Valid Enclave Signature + PCR Match)
 ```move
-// Create a new price oracle
-let oracle = create_oracle<PRICE_ORACLE>(ctx);
-
-// Share it to make it publicly accessible
-share_oracle(oracle);
-```
-
-#### Update Price (Requires Valid Enclave Signature)
-```move
-fun update_price<T: drop>(
-    oracle: &mut PriceOracle<T>,
-    enclave: &Enclave<T>,
+entry fun update_sui_price(
+    oracle: &mut PriceOracle,
+    registry: &EnclaveRegistry,
+    enclave_pk: vector<u8>,
     price: u64,
     timestamp_ms: u64,
     signature: vector<u8>,
 )
 ```
 
-Note: The signature is secp256k1 (64 bytes) with SHA256 hashing.
+The function:
+1. Looks up the enclave's PCRs from the registry
+2. Checks the PCRs match the oracle's expected values
+3. Verifies the secp256k1 signature over the price payload
+4. Stores the price at the timestamp
 
 #### Query Functions (Public Access)
 ```move
@@ -73,75 +71,59 @@ let timestamp = get_latest_timestamp(&oracle);
 
 ### Prerequisites
 
-1. **Oyster Enclave Setup**: Follow the [enclave deployment instructions](../enclave/README.md) to:
+1. **Oyster Enclave Setup**: Follow the [enclave deployment instructions](../enclave_rust/README.md) to:
    - Deploy an Oyster Enclave
    - Configure it to fetch SUI prices
    - Build and get the PCR values
 
-2. **Dependencies**: Already configured in `Move.toml`:
-```toml
-[dependencies]
-enclave = { git = "https://github.com/MystenLabs/nautilus.git", subdir = "move/enclave", rev = "main" }
-```
-
-Uses the `enclave` module from nautilus repo to register enclaves.
+2. **Dependencies**: Already configured in `Move.toml`
 
 ### Deployment Steps
 
-**Step 1: Publish the package**
+**Step 1: Register your enclave in the registry**
+
+Assuming the enclave registry is already deployed, register your enclave's public key and PCR values:
+
+```bash
+sh script/register_enclave.sh \
+    <PACKAGE_ID> \
+    <REGISTRY_ID> \
+    <ENCLAVE_IP>
+```
+
+This fetches the attestation from the enclave, verifies it on-chain, and stores the public key + PCR values in the shared registry.
+
+**Step 2: Publish the application package**
 ```bash
 sui move build
 sui client publish --gas-budget 100000000 --with-unpublished-dependencies
 ```
 
-This automatically:
-- Creates the enclave configuration (via `init` function)
-- Transfers the capability to the deployer
-- Sets up the infrastructure
+This automatically creates (via `init` functions):
+- **PriceOracle** (shared) - from the oyster_demo module
+- **AdminCap** (owned by deployer) - for updating expected PCRs
 
 Save these IDs from the transaction output:
 - **Package ID**: `0x...`
-- **EnclaveConfig Object ID**: `0x...` (shared object)
-- **Cap Object ID**: `0x...` (owned by deployer)
+- **PriceOracle Object ID**: `0x...` (shared object)
+- **AdminCap Object ID**: `0x...` (owned by deployer)
 
-**Step 2: Update PCRs (after building your enclave)**
+**Step 3: Update expected PCRs (after building your enclave)**
 ```bash
 sui client call \
-    --package <ENCLAVE_PACKAGE_ID> \
-    --module enclave \
-    --function update_pcrs \
-    --args <ENCLAVE_CONFIG_ID> <CAP_ID> 0x<PCR0> 0x<PCR1> 0x<PCR2> 0x<PCR16>\
-    --type-args "<PACKAGE_ID>::oyster_demo::OYSTER_DEMO" \
+    --package <PACKAGE_ID> \
+    --module oyster_demo \
+    --function update_expected_pcrs \
+    --args <ORACLE_ID> <ADMIN_CAP_ID> 0x<PCR0> 0x<PCR1> 0x<PCR2> 0x<PCR16> \
     --gas-budget 10000000
 ```
 
-**Step 3: Register your enclave**
+**Step 4: Update prices**
 ```bash
-# Get attestation from your running enclave
-curl http://<ENCLAVE_IP>:1301/attestation/hex
-
-# Register it on-chain
-sh script/register_enclave.sh \
-    <ENCLAVE_PACKAGE_ID> \
-    <APP_PACKAGE_ID> \
-    <ENCLAVE_CONFIG_ID> \
-    ENCLAVE_IP \
-    oyster_demo \
-    OYSTER_DEMO
+sh script/update_price.sh <ENCLAVE_IP> <PACKAGE_ID> <ORACLE_ID> <REGISTRY_ID>
 ```
 
-Save the **Enclave Object ID**: `0x...` (shared object)
-
-**Step 4: Initialize the oracle**
-```bash
-sh script/initialize_oracle.sh <PACKAGE_ID>
-```
-
-Save the **Oracle Object ID**: `0x...` (shared object) from the transaction output.
-
-Look for the newly created `PriceOracle` shared object in the output
-
-Done! Your oracle is now ready to accept price updates from the authorized enclave only.
+Done! Your oracle is now ready to accept price updates from enclaves whose PCRs match the expected values.
 
 ## Usage Example
 
@@ -159,40 +141,23 @@ Example response:
 {
   "price": 1250000,
   "timestamp_ms": 1700000000000,
-  "signature": "a1b2c3..."  // 64 bytes hex-encoded secp256k1 signature
+  "signature": "a1b2c3..."
 }
 ```
-
-**Signature Format**: The enclave signs the BCS-serialized `IntentMessage<PriceUpdatePayload>` structure:
-```rust
-IntentMessage {
-    intent: 0,
-    timestamp_ms: 1700000000000,
-    data: PriceUpdatePayload { price: 1250000 }
-}
-```
-The signature is created using secp256k1 with SHA256 hashing (64 bytes: r + s).
 
 ### On-Chain: Update Price
 
 Use the provided script to fetch the price from the enclave and submit it on-chain:
 
 ```bash
-sh script/update_price.sh <ENCLAVE_IP> <PACKAGE_ID> <ORACLE_ID> <ENCLAVE_ID>
-```
-
-Example:
-```bash
-sh update_price.sh 192.168.1.100 0x123... 0x456... 0x789...
+sh script/update_price.sh <ENCLAVE_IP> <PACKAGE_ID> <ORACLE_ID> <REGISTRY_ID>
 ```
 
 The script will:
-1. Fetch the signed price from the enclave at `http://<ENCLAVE_IP>:3000/price`
-2. Extract the price, timestamp, and signature
-3. Convert the signature to the proper format
+1. Fetch the enclave's public key from `http://<ENCLAVE_IP>:3000/public-key`
+2. Fetch the signed price from `http://<ENCLAVE_IP>:3000/price`
+3. Convert the public key and signature to the proper format
 4. Submit the transaction on-chain
-
-**Note**: The signature must be 64 bytes (128 hex characters) in secp256k1 compact format.
 
 ### On-Chain: Read Prices
 
@@ -210,36 +175,27 @@ if (has_price_at_timestamp(&oracle, some_timestamp)) {
 }
 ```
 
-## Security Considerations
+## Trust Model
 
-### Attestation Verification
+The enclave key registry and the application have clearly separated responsibilities:
 
-The contract verifies that:
-1. The secp256k1 signature (64 bytes) is valid for the given payload
-2. The signature was created by a registered enclave
-3. The enclave's public key matches the on-chain record (converted from 64-byte uncompressed to 33-byte compressed format)
-4. The PCRs (Platform Configuration Registers) match the expected values
-5. The signature uses SHA256 hashing (hash flag = 1)
+1. **Registry stores data**: When an enclave registers, the registry verifies the NitroAttestationDocument and stores the (public_key, PCRs) pair. This is a one-time operation. The registry does not enforce any trust policy.
+2. **Applications define trust**: Applications query the registry to get the PCR values for a public key and compare against their expected values. Each application independently decides which PCR values to trust.
+3. **Applications verify signatures**: Signature verification is the application's responsibility. The application uses the public key from the registry and verifies the signature over its own payload format.
 
-TODO: Store enclave's public key in 33-byte compressed format while registering.
-
-**Public Key Format**: 
-- Enclave module stores: 64 bytes uncompressed secp256k1 (X + Y coordinates)
-- Contract converts to: 33 bytes compressed (prefix + X coordinate)
-- Prefix: 0x02 if Y is even, 0x03 if Y is odd
-
-### Trust Model
-
-- **Enclaves**: Only registered enclaves with valid attestations can update prices
-- **Price Data**: Historical prices are immutable once stored
-- **Latest Tracking**: Latest price can be tracked
-- **Permissionless Reads**: Anyone can query price data
+This means:
+- The registry is a generic, reusable component
+- Multiple applications can share the same registry
+- Applications independently decide which PCR values to trust
+- Applications define their own payload formats and signature verification logic
+- Attestation verification happens only once per enclave, not per application
 
 ## Error Codes
 
 - `EInvalidSignature (0)`: The provided signature is invalid or doesn't match the payload
 - `ENoPriceAtTimestamp (1)`: No price exists at the requested timestamp
 - `ENoPriceAvailable (2)`: The oracle has no prices yet (latest price query on empty oracle)
+- `EInvalidPCRs (3)`: The enclave's PCR values don't match the oracle's expected values
 
 ## Events
 
@@ -263,6 +219,5 @@ public struct PriceUpdated has copy, drop {
 ## Resources
 
 - [Oyster Documentation](https://docs.marlin.org/oyster/build-cvm/tutorials/)
-- [Nautilus Enclave Module](https://github.com/MystenLabs/nautilus/blob/main/move/enclave/sources/enclave.move)
 - [AWS Nitro Enclaves](https://aws.amazon.com/ec2/nitro/nitro-enclaves/)
 - [Sui Move Documentation](https://docs.sui.io/build/move)

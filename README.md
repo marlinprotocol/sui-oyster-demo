@@ -5,7 +5,8 @@ A decentralized price oracle for SUI token that uses AWS Nitro Enclaves (via Oys
 ## Overview
 
 This project demonstrates how to build a secure price oracle using:
-- **Sui Move Smart Contracts**: On-chain price storage and signature verification
+- **Enclave Key Registry** (`enclave.move`): A shared on-chain registry that maps verified enclave public keys to their PCR values. It is application-independent and can be used by any application.
+- **Price Oracle** (`oyster_demo.move`): An application that consumes the registry to verify enclave signatures, check PCRs, and store SUI token prices on-chain.
 - **AWS Nitro Enclaves**: Hardware-isolated execution via Oyster deployment
 - **secp256k1 Signatures**: Cryptographic proof that prices come from authorized enclaves
 - **PCR Attestation**: Verifies the exact enclave code running
@@ -13,15 +14,23 @@ This project demonstrates how to build a secure price oracle using:
 ## Architecture
 
 ```
-┌─────────────────┐
-│   CoinGecko API │
-└────────┬────────┘
-         │
-         ▼
+                              ┌───────────────────┐
+                              │  Enclave Registry │
+                              │  (shared, generic)│
+                              │  ┌──────────────┐ │
+                              │  │pubkey -> PCRs│ │
+                              │  └──────────────┘ │
+                              └─────────┬─────────┘
+                                        │
+┌─────────────────┐                     │
+│   CoinGecko API │                     │
+└────────┬────────┘                     │
+         │                              │
+         ▼                              ▼
 ┌─────────────────────┐      ┌──────────────────┐
 │  Oyster Enclave     │      │   Sui Blockchain │
 │  ┌───────────────┐  │      │  ┌────────────┐  │
-│  │ Price Fetcher │  │──────┼─▶│ Move Oracle│  │
+│  │ Price Fetcher │  │──────┼─▶│Price Oracle│  │
 │  └───────────────┘  │      │  └────────────┘  │
 │  ┌───────────────┐  │      │         │        │
 │  │ secp256k1 Key │  │      │         ▼        │
@@ -33,11 +42,12 @@ This project demonstrates how to build a secure price oracle using:
 ```
 
 **Flow:**
-1. Enclave fetches SUI price from CoinGecko
-2. Enclave signs price data with secp256k1 private key
-3. Anyone submits signed price to Sui blockchain
-4. Move contract verifies signature against registered enclave
-5. Price stored on-chain with timestamp
+1. Enclave registers in the shared registry (attestation verified, public key + PCRs stored)
+2. Application contract is deployed with expected PCR values
+3. Enclave fetches SUI price from CoinGecko and signs it with secp256k1
+4. Anyone submits signed price to Sui blockchain
+5. Application contract looks up the enclave's PCRs from the registry, checks they match expected values, and verifies the signature
+6. Price stored on-chain with timestamp
 
 ## Project Structure
 
@@ -45,13 +55,12 @@ This project demonstrates how to build a secure price oracle using:
 .
 ├── contracts/              # Sui Move smart contracts
 │   ├── sources/
-│   │   └── oyster_demo.move   # Price oracle with attestation verification
+│   │   ├── enclave.move       # Shared enclave key registry (generic)
+│   │   └── oyster_demo.move   # Price oracle application (uses registry)
 │   ├── script/            # Helper scripts for deployment
-│   │   ├── initialize_oracle.sh
 │   │   ├── register_enclave.sh
 │   │   ├── update_price.sh
 │   │   ├── get_price.sh
-│   │   └── query_enclave.sh
 │   └── README.md          # Contract deployment guide
 │
 ├── enclave_rust/          # Rust enclave server
@@ -79,24 +88,7 @@ This project demonstrates how to build a secure price oracle using:
 - **Oyster CLI**: [docs](https://docs.marlin.org/oyster/build-cvm/tutorials/setup#install-the-oyster-cvm-cli-tool)
 - **Wallet**: With SUI tokens for gas fees and USDC for enclave deployments
 
-### Step 1: Deploy Smart Contracts
-
-```bash
-cd contracts
-
-# Build and publish
-sui move build
-sui client publish --gas-budget 100000000 --with-unpublished-dependencies
-
-# Save these IDs from transaction output:
-# - PACKAGE_ID (in Published Objects)
-# - ENCLAVE_CONFIG_ID (shared object, type: EnclaveConfig)
-# - CAP_ID (owned object, type: Cap)
-```
-
-See [contracts/README.md](contracts/README.md) for detailed instructions.
-
-### Step 2: Build and Deploy Enclave
+### Step 1: Build and Deploy Enclave
 
 Pick an implementation and target architecture, then build reproducibly with Nix (artifacts are tarballs you can `docker load`).
 
@@ -132,35 +124,19 @@ oyster-cvm deploy \
 
 See the language-specific READMEs for deployment details.
 
-### Step 3: Register Enclave On-Chain
+### Step 2: Register Enclave in Registry
+
+The enclave registry (`enclave.move`) is a shared, application-independent contract that stores verified (public_key -> PCRs) mappings. Assuming the registry is already deployed, register your enclave:
 
 ```bash
-# Get attestation
-curl http://<PUBLIC_IP>:1301/attestation/hex
-
-# Get PCR values to extract the PCR values from the enclave attestation. Record PCR0, PCR1, PCR2, PCR16 and imageId for later use.
-oyster-cvm verify --enclave-ip <PUBLIC_IP>
-
-# Update PCRs (after building enclave)
-sui client call \
-  --package <ENCLAVE_PACKAGE_ID> \
-  --module enclave \
-  --function update_pcrs \
-  --args <ENCLAVE_CONFIG_ID> <CAP_ID> 0x<PCR0> 0x<PCR1> 0x<PCR2> 0x<PCR16> \
-  --type-args "<PACKAGE_ID>::oyster_demo::OYSTER_DEMO" \
-  --gas-budget 10000000
-
-# Register enclave
+# Register enclave (verifies attestation, stores public key + PCRs in registry)
 sh contracts/script/register_enclave.sh \
-  <ENCLAVE_PACKAGE_ID> \
   <PACKAGE_ID> \
-  <ENCLAVE_CONFIG_ID> \
-  <PUBLIC_IP> \
-  oyster_demo \
-  OYSTER_DEMO
-
-# Save ENCLAVE_ID from output
+  <REGISTRY_ID> \
+  <PUBLIC_IP>
 ```
+
+This fetches the attestation document from the enclave, verifies it on-chain, and stores the public key along with its PCR values in the registry. Once registered, any application can look up this enclave's PCRs.
 
 #### Verifying Enclave Integrity
 
@@ -236,42 +212,78 @@ oyster-cvm verify --enclave-ip <PUBLIC_IP>
 
 If both imageId values match, you have cryptographic proof that the deployed enclave is running the exact code you inspected and built locally.
 
-### Step 4: Initialize Oracle
+### Step 3: Deploy Application Contract
+
+With the enclave registered in the registry, deploy the application contract that will consume the registry data.
 
 ```bash
-cd contracts/script
-sh initialize_oracle.sh <PACKAGE_ID>
+cd contracts
 
-# Save ORACLE_ID from output
+# Build and publish
+sui move build
+sui client publish --gas-budget 100000000 --with-unpublished-dependencies
+
+# Save these IDs from transaction output:
+# - PACKAGE_ID (in Published Objects)
+# - ORACLE_ID (shared object, type: PriceOracle)
+# - ADMIN_CAP_ID (owned object, type: AdminCap)
+```
+
+See [contracts/README.md](contracts/README.md) for detailed instructions.
+
+### Step 4: Update Expected PCRs
+
+Configure the oracle with the PCR values of the enclave you trust.
+
+```bash
+# Get PCR values from the enclave attestation
+oyster-cvm verify --enclave-ip <PUBLIC_IP>
+
+# Update the oracle's expected PCRs
+sui client call \
+  --package <PACKAGE_ID> \
+  --module oyster_demo \
+  --function update_expected_pcrs \
+  --args <ORACLE_ID> <ADMIN_CAP_ID> 0x<PCR0> 0x<PCR1> 0x<PCR2> 0x<PCR16> \
+  --gas-budget 10000000
 ```
 
 ### Step 5: Update Prices
 
 ```bash
 # One-time update
-sh update_price.sh <PUBLIC_IP> <PACKAGE_ID> <ORACLE_ID> <ENCLAVE_ID>
+sh contracts/script/update_price.sh <PUBLIC_IP> <PACKAGE_ID> <ORACLE_ID> <REGISTRY_ID>
 
-# Or query current price
-sh get_price.sh <PUBLIC_IP>
+# Or query current price from enclave
+sh contracts/script/get_price.sh <PUBLIC_IP>
 ```
 
 ## Key Features
 
-### 🔒 Security
+### Security
 
 - **Hardware Isolation**: Enclave runs in AWS Nitro Enclaves with memory encryption
 - **Attestation**: PCRs prove exact enclave code is running
+- **Shared Registry**: Verified (public_key, PCRs) pairs stored on-chain after attestation verification
 - **secp256k1 Signatures**: 64-byte compact signatures with SHA256 hashing
 - **Immutable History**: Historical prices stored on-chain, cannot be modified
 
-### 📊 Price Oracle
+### Enclave Key Registry
 
+- **Application-independent**: A pure data store mapping public keys to PCRs. Does not enforce any application-level logic (e.g. signature verification, PCR matching).
+- **One-time attestation**: Attestation verified once at registration, not per operation
+- **Public queryability**: Anyone can check if a key is registered and view its PCRs
+- **Composable**: Multiple applications can use the same registry, each applying their own trust policy
+
+### Price Oracle
+
+- **Application-level trust**: The oracle decides which PCRs to accept and verifies signatures itself
 - **Real-time Prices**: Fetches from CoinGecko API
-- **Precision**: 6 decimal places (price × 10^6)
+- **Precision**: 6 decimal places (price x 10^6)
 - **Timestamp Mapping**: Query historical prices by timestamp
 - **Latest Tracking**: Fast access to most recent price
 
-### 🚀 Deployment
+### Deployment
 
 - **Docker-based**: Easy reproducible builds
 - **Oyster Integration**: One-command deployment to AWS
@@ -285,16 +297,31 @@ sh get_price.sh <PUBLIC_IP>
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/health` | GET | Health check |
-| `/public-key` | GET | Get enclave's secp256k1 public key (65 bytes uncompressed) |
+| `/public-key` | GET | Get enclave's secp256k1 public key (33 bytes compressed) |
 | `/price` | GET | Get signed SUI price |
 | `:1301/attestation/hex` | GET | Get attestation document for registration |
 
 ### Move Contract Functions
 
+#### Enclave Registry (`enclave::enclave`)
+
+A generic key-PCR store. Applications consume this data as they see fit.
+
 | Function | Access | Description |
 |----------|--------|-------------|
-| `initialize_oracle()` | Entry | Create and share the oracle |
-| `update_sui_price()` | Entry | Update price with valid signature |
+| `register_enclave()` | Public | Register enclave after attestation verification |
+| `is_registered()` | Public | Check if a public key is registered |
+| `get_pcrs()` | Public | Get PCR values for a registered public key |
+| `new_pcrs()` | Public | Construct a Pcrs value |
+
+#### Price Oracle (`oyster_demo::oyster_demo`)
+
+An application that uses the registry to verify and store prices.
+
+| Function | Access | Description |
+|----------|--------|-------------|
+| `update_expected_pcrs()` | Entry (admin) | Update the oracle's expected PCR values |
+| `update_sui_price()` | Entry | Verify signature, check PCRs from registry, and update price |
 | `get_latest_price()` | Public | Get most recent price and timestamp |
 | `get_price_at_timestamp()` | Public | Get historical price |
 | `has_price_at_timestamp()` | Public | Check if price exists |
@@ -304,61 +331,48 @@ sh get_price.sh <PUBLIC_IP>
 ### Integration Test
 ```bash
 # 1. Deploy enclave
-# 2. Register on-chain
-# 3. Fetch and submit price
-sh contracts/script/update_price.sh <PUBLIC_IP> <PACKAGE_ID> <ORACLE_ID> <ENCLAVE_ID>
-
-# 4. Query on-chain
-sui client call \
-  --package <PACKAGE_ID> \
-  --module oyster_demo \
-  --function get_latest_price \
-  --args <ORACLE_ID> \
-  --type-args "<PACKAGE_ID>::oyster_demo::OYSTER_DEMO"
+# 2. Register enclave in registry
+# 3. Deploy application contract
+# 4. Update expected PCRs on oracle
+# 5. Fetch and submit price
+sh contracts/script/update_price.sh <PUBLIC_IP> <PACKAGE_ID> <ORACLE_ID> <REGISTRY_ID>
 ```
 
-## Examples
-
-### Query Historical Prices
+### Unit Tests
 ```bash
-# Get price at specific timestamp
-sui client call \
-  --package <PACKAGE_ID> \
-  --module oyster_demo \
-  --function get_price_at_timestamp \
-  --args <ORACLE_ID> <TIMESTAMP_MS> \
-  --type-args "<PACKAGE_ID>::oyster_demo::OYSTER_DEMO"
+cd contracts
+sui move test
 ```
 
 ## Reproducible Builds: Pitfalls & Best Practices
 
 When building reproducible enclave images, avoid these common gotchas:
 
-### ❌ **Native/Compiled Dependencies**
+### **Native/Compiled Dependencies**
 - **Pitfall**: Using native modules (e.g., original secp256k1, node-gyp) breaks reproducibility across architectures.
 - **Fix**: Prefer pure-language implementations (@noble/secp256k1 for JS, libsodium for bindings, etc.) or accept per-architecture builds.
 
-### ❌ **Old Docker Versions (overlay2 vs containerd)**
+### **Old Docker Versions (overlay2 vs containerd)**
 - **Pitfall**: Docker <29 may produce different digests when loading images (`docker load`) due to storage backend differences. Build output is fine; hashes can shift only after load.
 - **Fix**: Use Docker 29+ when you need stable digests after `docker load`.
 
-### ❌ **Using Tags Instead of Digests**
-- **Pitfall**: Docker tags (`:latest`, `:v1.0`) move and don't guarantee content—digest mismatches lead to PCR failures.
+### **Using Tags Instead of Digests**
+- **Pitfall**: Docker tags (`:latest`, `:v1.0`) move and don't guarantee content.
 - **Fix**: Always use image digests (`sha256:abc...`) in docker-compose.yml; capture with `docker inspect --format='{{index .RepoDigests 0}}'` after pushing.
 
-### ❌ **Modifying Dependencies Without Updating Hashes**
+### **Modifying Dependencies Without Updating Hashes**
 - **Pitfall**: Changing package.json/Cargo.toml but forgetting to update npmDepsHash or Cargo.lock; builds silently succeed with wrong deps.
 - **Fix**: Update lock files first, then let Nix build fail with the new hash; copy the "got" value into build.nix.
 
-### ❌ **Not Verifying Reproducibility**
-- **Pitfall**: Assuming builds are reproducible without testing—hidden non-determinism (timestamps, random UUIDs) only surfaces in PCR mismatches post-deployment.
+### **Not Verifying Reproducibility**
+- **Pitfall**: Assuming builds are reproducible without testing -- hidden non-determinism (timestamps, random UUIDs) only surfaces in PCR mismatches post-deployment.
 - **Fix**: Build twice from the same source and compare hashes: `shasum -a 256 image-run1.tar.gz image-run2.tar.gz`; hashes must match exactly.
 
-### ❌ **Forgetting to Commit Lock Files**
+### **Forgetting to Commit Lock Files**
 - **Pitfall**: Lock files in .gitignore; rebuild and gets different images (different PCRs, deploy breaks).
 - **Fix**: Commit Cargo.lock, package-lock.json, and flake.lock to version control so all builds use identical dependencies.
 
-### ✅ **Best Practices**
+### **Best Practices**
 - Verify reproducibility early and often; catch non-determinism before deployment.
 - Use **digests** (not tags) for content-addressed images.
 - Keep **lock files** in git; treat them as part of the source.
@@ -367,7 +381,6 @@ When building reproducible enclave images, avoid these common gotchas:
 ## Resources
 
 - [Sui Documentation](https://docs.sui.io/)
-- [Nautilus Framework](https://github.com/MystenLabs/nautilus)
 - [Oyster Documentation](https://docs.marlin.org/oyster/)
 - [Oyster CVM CLI](https://docs.marlin.org/oyster/build-cvm/quickstart)
 - [AWS Nitro Enclaves](https://aws.amazon.com/ec2/nitro/nitro-enclaves/)

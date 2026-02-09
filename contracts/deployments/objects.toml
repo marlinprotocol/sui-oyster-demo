@@ -1,6 +1,7 @@
 [testnet]
-package_id = "0x034e3ab5eeefcb5f48f5b7bd9de0febcd8d9c8383e7f696184a3cc04dcd29739" # modules - enclave, oyster_demo
-Cap = "0xf9adde03baa8cf37188685a1dbd1f843937017739f20250692df3f2b75592504"
-EnclaveConfig = "0x2ab18cce6ee4eee0261c46cbc003ba29f1558c2347ca19af86012c6ccee00ced"
-UpgradeCap = "0xe461de59f1f52d9eda96d9b4efae79a46dc272a47e1559c421f8bae5237e92f9"
+package_id = "0x0" # modules - enclave, oyster_demo
+EnclaveRegistry = "0x0" # shared object from enclave::init
+PriceOracle = "0x0" # shared object from oyster_demo::init
+AdminCap = "0x0" # owned by deployer, for updating expected PCRs
+UpgradeCap = "0x0"
 rpc_url = "https://fullnode.testnet.sui.io:443"
