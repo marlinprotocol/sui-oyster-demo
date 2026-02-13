@@ -8,6 +8,7 @@
 // (e.g. verify signatures, check PCRs against expected values, etc.).
 //
 // NOTE: This registry supports secp256k1 and x25519 public keys.
+// (purely key length checks, any other type of keys with same length will also be accepted)
 // secp256k1 keys are stored in compressed format (33 bytes).
 // x25519 keys are stored as raw 32-byte public keys.
 //
@@ -94,15 +95,16 @@ public fun register_enclave(
     let pk = load_pk(&document);
     let pcrs = document.to_pcrs();
 
+    // Redundant check as table::add will fail if key already exists, but this allows us to emit a cleaner error
     assert!(!table::contains(&registry.enclaves, pk), EAlreadyRegistered);
     table::add(&mut registry.enclaves, pk, pcrs);
 
     event::emit(EnclaveRegistered {
         pk,
-        pcr0: pcrs.0,
-        pcr1: pcrs.1,
-        pcr2: pcrs.2,
-        pcr16: pcrs.3,
+        pcr0: *pcrs.pcr_0(),
+        pcr1: *pcrs.pcr_1(),
+        pcr2: *pcrs.pcr_2(),
+        pcr16: *pcrs.pcr_16(),
     });
 }
 
@@ -113,6 +115,7 @@ public fun is_registered(registry: &Registry, pk: &vector<u8>): bool {
 
 /// Get the PCR values for a registered public key.
 public fun get_pcrs(registry: &Registry, pk: &vector<u8>): &Pcrs {
+    // Assert the key is registered to provide a clearer error message, otherwise table::borrow will fail with a less descriptive error
     assert!(table::contains(&registry.enclaves, *pk), ENotRegistered);
     table::borrow(&registry.enclaves, *pk)
 }
