@@ -138,7 +138,7 @@ The enclave registry (`enclave_registry.move`) is a shared, application-independ
 ```bash
 # Register enclave (verifies attestation, stores public key + PCRs in registry)
 sh contracts/script/register_enclave.sh \
-  <PACKAGE_ID> \
+  <REGISTRY_PACKAGE_ID> \
   <REGISTRY_ID> \
   <PUBLIC_IP> \
   [ATTESTATION_PORT]  # defaults to 1301
@@ -232,7 +232,7 @@ sui move build
 sui client publish --gas-budget 100000000 --with-unpublished-dependencies
 
 # Save these IDs from transaction output:
-# - PACKAGE_ID (in Published Objects)
+# - DEMO_PACKAGE_ID (in Published Objects)
 # - ORACLE_ID (shared object, type: PriceOracle)
 # - ADMIN_CAP_ID (owned object, type: AdminCap)
 ```
@@ -249,7 +249,7 @@ oyster-cvm verify --enclave-ip <PUBLIC_IP>
 
 # Update the oracle's expected PCRs
 sui client call \
-  --package <PACKAGE_ID> \
+  --package <DEMO_PACKAGE_ID> \
   --module oyster_demo \
   --function update_expected_pcrs \
   --args <ORACLE_ID> <ADMIN_CAP_ID> 0x<PCR0> 0x<PCR1> 0x<PCR2> 0x<PCR16> \
@@ -260,7 +260,7 @@ sui client call \
 
 ```bash
 # One-time update (app_port defaults to 3000)
-sh contracts/script/update_price.sh <PUBLIC_IP> <PACKAGE_ID> <ORACLE_ID> <REGISTRY_ID> [APP_PORT]
+sh contracts/script/update_price.sh <PUBLIC_IP> <DEMO_PACKAGE_ID> <ORACLE_ID> <REGISTRY_ID> [APP_PORT]
 
 # Or query current price from enclave
 sh contracts/script/get_price.sh <PUBLIC_IP> [APP_PORT]
@@ -343,7 +343,7 @@ An application that uses the registry to verify and store prices.
 # 3. Deploy application contract
 # 4. Update expected PCRs on oracle
 # 5. Fetch and submit price
-sh contracts/script/update_price.sh <PUBLIC_IP> <PACKAGE_ID> <ORACLE_ID> <REGISTRY_ID> [APP_PORT]
+sh contracts/script/update_price.sh <PUBLIC_IP> <DEMO_PACKAGE_ID> <ORACLE_ID> <REGISTRY_ID> [APP_PORT]
 ```
 
 ### Unit Tests

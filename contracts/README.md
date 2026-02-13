@@ -86,7 +86,7 @@ Assuming the enclave registry is already deployed, register your enclave's publi
 
 ```bash
 sh script/register_enclave.sh \
-    <PACKAGE_ID> \
+    <REGISTRY_PACKAGE_ID> \
     <REGISTRY_ID> \
     <ENCLAVE_IP> \
     [ATTESTATION_PORT]  # defaults to 1301
@@ -106,14 +106,14 @@ This automatically creates (via `init` functions):
 - **AdminCap** (owned by deployer) - for updating expected PCRs
 
 Save these IDs from the transaction output:
-- **Package ID**: `0x...`
+- **Package ID** (`<DEMO_PACKAGE_ID>`): `0x...`
 - **PriceOracle Object ID**: `0x...` (shared object)
 - **AdminCap Object ID**: `0x...` (owned by deployer)
 
 **Step 3: Update expected PCRs (after building your enclave)**
 ```bash
 sui client call \
-    --package <PACKAGE_ID> \
+    --package <DEMO_PACKAGE_ID> \
     --module oyster_demo \
     --function update_expected_pcrs \
     --args <ORACLE_ID> <ADMIN_CAP_ID> 0x<PCR0> 0x<PCR1> 0x<PCR2> 0x<PCR16> \
@@ -122,7 +122,7 @@ sui client call \
 
 **Step 4: Update prices**
 ```bash
-sh script/update_price.sh <ENCLAVE_IP> <PACKAGE_ID> <ORACLE_ID> <REGISTRY_ID> [APP_PORT]
+sh script/update_price.sh <ENCLAVE_IP> <DEMO_PACKAGE_ID> <ORACLE_ID> <REGISTRY_ID> [APP_PORT]
 ```
 
 `APP_PORT` defaults to 3000. Your oracle is now ready to accept price updates from enclaves whose PCRs match the expected values.
@@ -152,7 +152,7 @@ Example response:
 Use the provided script to fetch the price from the enclave and submit it on-chain:
 
 ```bash
-sh script/update_price.sh <ENCLAVE_IP> <PACKAGE_ID> <ORACLE_ID> <REGISTRY_ID> [APP_PORT]
+sh script/update_price.sh <ENCLAVE_IP> <DEMO_PACKAGE_ID> <ORACLE_ID> <REGISTRY_ID> [APP_PORT]
 ```
 
 The script will:

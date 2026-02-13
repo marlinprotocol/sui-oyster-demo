@@ -1,12 +1,12 @@
 #!/bin/bash
 
 # Script to fetch price from enclave and update it on-chain
-# Usage: ./update_price.sh <enclave_ip> <package_id> <oracle_id> <registry_id> [app_port]
+# Usage: ./update_price.sh <enclave_ip> <demo_package_id> <oracle_id> <registry_id> [app_port]
 
 set -e
 
 if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ] || [ -z "$4" ]; then
-    echo "Usage: $0 <enclave_ip> <package_id> <oracle_id> <registry_id> [app_port]"
+    echo "Usage: $0 <enclave_ip> <demo_package_id> <oracle_id> <registry_id> [app_port]"
     echo "Example: $0 192.168.1.100 0x123... 0x456... 0x789... 3000"
     echo ""
     echo "  app_port defaults to 3000 if not specified"
@@ -14,7 +14,7 @@ if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ] || [ -z "$4" ]; then
 fi
 
 ENCLAVE_IP="$1"
-PACKAGE_ID="$2"
+DEMO_PACKAGE_ID="$2"
 ORACLE_ID="$3"
 REGISTRY_ID="$4"
 APP_PORT="${5:-3000}"
@@ -80,7 +80,7 @@ echo "Submitting price update to blockchain..."
 
 # Submit the price update
 sui client call \
-    --package "$PACKAGE_ID" \
+    --package "$DEMO_PACKAGE_ID" \
     --module oyster_demo \
     --function update_sui_price \
     --args "$ORACLE_ID" "$REGISTRY_ID" "$PK_VECTOR" "$PRICE" "$TIMESTAMP_MS" "$SIG_VECTOR" \
