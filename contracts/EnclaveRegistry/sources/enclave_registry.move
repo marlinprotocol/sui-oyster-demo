@@ -6,9 +6,18 @@
 // Applications can query the registry to check if a public key is registered
 // and retrieve its PCR values, then use that data however they see fit
 // (e.g. verify signatures, check PCRs against expected values, etc.).
+//
+// NOTE: This registry supports secp256k1 and x25519 public keys.
+// secp256k1 keys are stored in compressed format (33 bytes).
+// x25519 keys are stored as raw 32-byte public keys.
+//
+// NOTE: No on-curve validation is performed on public keys. The registry only
+// validates key length. If an invalid key is registered, signature verification
+// against it will always fail, but the entry will persist in the registry.
 
 module enclave_registry::enclave_registry;
 
+use sui::event;
 use sui::nitro_attestation::NitroAttestationDocument;
 use sui::table::{Self, Table};
 
@@ -17,10 +26,17 @@ use fun to_pcrs as NitroAttestationDocument.to_pcrs;
 const ENotRegistered: u64 = 0;
 const EAlreadyRegistered: u64 = 1;
 const EInvalidPublicKeyLength: u64 = 2;
+const ENoPublicKey: u64 = 3;
+const EInvalidUncompressedPrefix: u64 = 4;
+const EInvalidCompressedPrefix: u64 = 5;
 
 // Expected public key lengths for secp256k1
 const SECP256K1_PK_LENGTH_COMPRESSED: u64 = 33;
 const SECP256K1_PK_LENGTH_UNCOMPRESSED: u64 = 64;
+const SECP256K1_PK_LENGTH_UNCOMPRESSED_WITH_PREFIX: u64 = 65;
+
+// Expected public key length for x25519
+const X25519_PK_LENGTH: u64 = 32;
 
 // PCR0: Enclave image file
 // PCR1: Enclave Kernel
@@ -28,10 +44,20 @@ const SECP256K1_PK_LENGTH_UNCOMPRESSED: u64 = 64;
 // PCR16: Application image
 public struct Pcrs(vector<u8>, vector<u8>, vector<u8>, vector<u8>) has copy, drop, store;
 
+/// Event emitted when an enclave is registered.
+public struct EnclaveRegistered has copy, drop {
+    pk: vector<u8>,
+    pcr0: vector<u8>,
+    pcr1: vector<u8>,
+    pcr2: vector<u8>,
+    pcr16: vector<u8>,
+}
+
 // One-time witness for module initialization
 public struct ENCLAVE_REGISTRY has drop {}
 
-// Shared registry mapping compressed secp256k1 public keys to their PCR values.
+// Shared registry mapping public keys to their PCR values.
+// secp256k1 keys are stored compressed (33 bytes), x25519 keys raw (32 bytes).
 // Entries are added only after attestation verification.
 public struct Registry has key {
     id: UID,
@@ -70,6 +96,14 @@ public fun register_enclave(
 
     assert!(!table::contains(&registry.enclaves, pk), EAlreadyRegistered);
     table::add(&mut registry.enclaves, pk, pcrs);
+
+    event::emit(EnclaveRegistered {
+        pk,
+        pcr0: pcrs.0,
+        pcr1: pcrs.1,
+        pcr2: pcrs.2,
+        pcr16: pcrs.3,
+    });
 }
 
 /// Check if a public key is registered in the registry.
@@ -90,18 +124,33 @@ public fun pcr_2(pcrs: &Pcrs): &vector<u8> { &pcrs.2 }
 public fun pcr_16(pcrs: &Pcrs): &vector<u8> { &pcrs.3 }
 
 fun load_pk(document: &NitroAttestationDocument): vector<u8> {
+    assert!(document.public_key().is_some(), ENoPublicKey);
     let mut pk = (*document.public_key()).destroy_some();
 
-    // If uncompressed, convert to compressed format
+    // If 65-byte uncompressed (0x04 prefix + 64 bytes), strip the prefix
+    if (pk.length() == SECP256K1_PK_LENGTH_UNCOMPRESSED_WITH_PREFIX) {
+        assert!(pk[0] == 0x04, EInvalidUncompressedPrefix);
+        let mut stripped = vector::empty<u8>();
+        let mut i = 1;
+        while (i < 65) {
+            stripped.push_back(pk[i]);
+            i = i + 1;
+        };
+        pk = stripped;
+    };
+
+    // If uncompressed secp256k1 (64 bytes), convert to compressed format
     if (pk.length() == SECP256K1_PK_LENGTH_UNCOMPRESSED) {
         pk = compress_secp256k1_pubkey(&pk);
     };
 
-    // Validate compressed secp256k1 public key length
-    assert!(
-        pk.length() == SECP256K1_PK_LENGTH_COMPRESSED,
-        EInvalidPublicKeyLength
-    );
+    // Validate key length: 33 (secp256k1 compressed) or 32 (x25519)
+    if (pk.length() == SECP256K1_PK_LENGTH_COMPRESSED) {
+        // Validate compressed secp256k1 key prefix is 0x02 or 0x03
+        assert!(pk[0] == 0x02 || pk[0] == 0x03, EInvalidCompressedPrefix);
+    } else {
+        assert!(pk.length() == X25519_PK_LENGTH, EInvalidPublicKeyLength);
+    };
 
     pk
 }

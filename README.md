@@ -5,7 +5,7 @@ A decentralized price oracle for SUI token that uses AWS Nitro Enclaves (via Oys
 ## Overview
 
 This project demonstrates how to build a secure price oracle using:
-- **Enclave Key Registry** (`enclave_registry.move`): A shared on-chain registry that maps verified enclave public keys to their PCR values. It is application-independent and can be used by any application. Deployed as a separate package.
+- **Enclave Key Registry** (`enclave_registry.move`): A shared on-chain registry that maps verified enclave public keys (secp256k1 and x25519) to their PCR values. It is application-independent and can be used by any application. Deployed as a separate package.
 - **Price Oracle** (`oyster_demo.move`): An application that consumes the registry to verify enclave signatures, check PCRs, and store SUI token prices on-chain. Deployed as a separate package that depends on the registry.
 - **AWS Nitro Enclaves**: Hardware-isolated execution via Oyster deployment
 - **secp256k1 Signatures**: Cryptographic proof that prices come from authorized enclaves
@@ -140,7 +140,8 @@ The enclave registry (`enclave_registry.move`) is a shared, application-independ
 sh contracts/script/register_enclave.sh \
   <PACKAGE_ID> \
   <REGISTRY_ID> \
-  <PUBLIC_IP>
+  <PUBLIC_IP> \
+  [ATTESTATION_PORT]  # defaults to 1301
 ```
 
 This fetches the attestation document from the enclave, verifies it on-chain, and stores the public key along with its PCR values in the registry. Once registered, any application can look up this enclave's PCRs.
@@ -258,11 +259,11 @@ sui client call \
 ### Step 5: Update Prices
 
 ```bash
-# One-time update
-sh contracts/script/update_price.sh <PUBLIC_IP> <PACKAGE_ID> <ORACLE_ID> <REGISTRY_ID>
+# One-time update (app_port defaults to 3000)
+sh contracts/script/update_price.sh <PUBLIC_IP> <PACKAGE_ID> <ORACLE_ID> <REGISTRY_ID> [APP_PORT]
 
 # Or query current price from enclave
-sh contracts/script/get_price.sh <PUBLIC_IP>
+sh contracts/script/get_price.sh <PUBLIC_IP> [APP_PORT]
 ```
 
 ## Key Features
@@ -304,7 +305,7 @@ sh contracts/script/get_price.sh <PUBLIC_IP>
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/health` | GET | Health check |
-| `/public-key` | GET | Get enclave's secp256k1 public key (33 bytes compressed) |
+| `/public-key` | GET | Get enclave's public key (33-byte compressed secp256k1 or 32-byte x25519) |
 | `/price` | GET | Get signed SUI price |
 | `:1301/attestation/hex` | GET | Get attestation document for registration |
 
@@ -342,7 +343,7 @@ An application that uses the registry to verify and store prices.
 # 3. Deploy application contract
 # 4. Update expected PCRs on oracle
 # 5. Fetch and submit price
-sh contracts/script/update_price.sh <PUBLIC_IP> <PACKAGE_ID> <ORACLE_ID> <REGISTRY_ID>
+sh contracts/script/update_price.sh <PUBLIC_IP> <PACKAGE_ID> <ORACLE_ID> <REGISTRY_ID> [APP_PORT]
 ```
 
 ### Unit Tests

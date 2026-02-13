@@ -4,26 +4,29 @@
 # Fetches attestation from the enclave, verifies it on-chain, and stores
 # the public key + PCR values in the registry table.
 #
-# Usage: ./register_enclave.sh <package_id> <registry_id> <enclave_IP>
+# Usage: ./register_enclave.sh <package_id> <registry_id> <enclave_ip> <attestation_port>
 
-if [ "$#" -ne 3 ]; then
-    echo "Usage: $0 <package_id> <registry_id> <enclave_IP>"
-    echo "Example: $0 0x872... 0x86f... 100.26.111.45"
+if [ "$#" -lt 3 ] || [ "$#" -gt 4 ]; then
+    echo "Usage: $0 <package_id> <registry_id> <enclave_ip> [attestation_port]"
+    echo "Example: $0 0x872... 0x86f... 100.26.111.45 1301"
+    echo ""
+    echo "  attestation_port defaults to 1301 if not specified"
     exit 1
 fi
 
 PACKAGE_ID=$1
 REGISTRY_ID=$2
-ENCLAVE_URL=$3
+ENCLAVE_IP=$3
+ATTESTATION_PORT=${4:-1301}
 
 echo 'fetching attestation'
 # Fetch attestation and store the hex
-ATTESTATION_HEX=$(curl -s http://$ENCLAVE_URL:1301/attestation/hex)
+ATTESTATION_HEX=$(curl -s http://${ENCLAVE_IP}:${ATTESTATION_PORT}/attestation/hex)
 
 echo "got attestation, length=${#ATTESTATION_HEX}"
 
 if [ ${#ATTESTATION_HEX} -eq 0 ]; then
-    echo "Error: Attestation is empty. Please check status of $ENCLAVE_URL and its get_attestation endpoint."
+    echo "Error: Attestation is empty. Please check status of ${ENCLAVE_IP}:${ATTESTATION_PORT} and its get_attestation endpoint."
     exit 1
 fi
 

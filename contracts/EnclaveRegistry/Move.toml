@@ -3,6 +3,7 @@ name = "enclave_registry"
 edition = "2024.beta"
 
 [dependencies]
+Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "563c15820b27dec9cbe75f826a3b6243ef44da1a" }
 
 [addresses]
 enclave_registry = "0x0"

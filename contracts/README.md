@@ -8,7 +8,7 @@ A Move smart contract that uses a shared enclave key registry for looking up ver
 
 A generic, application-independent shared registry that stores verified enclave public keys and their PCR values. It is a pure data store -- applications consume registry data however they see fit (e.g. verify signatures, check PCRs, gate access). Deployed as its own package and is a shared registry any enclave can register with (`EnclaveRegistry/`).
 
-- **`Registry`**: Shared object containing a `Table<vector<u8>, Pcrs>` mapping compressed secp256k1 public keys to their PCR values
+- **`Registry`**: Shared object containing a `Table<vector<u8>, Pcrs>` mapping public keys to their PCR values. Supports secp256k1 (stored as 33-byte compressed) and x25519 (stored as 32-byte raw) keys
 - **`register_enclave`**: Verifies a NitroAttestationDocument and stores the public key + PCRs in the registry
 - **`get_pcrs`**: Returns PCR values for a registered public key
 - **`is_registered`**: Checks if a public key exists in the registry
@@ -88,7 +88,8 @@ Assuming the enclave registry is already deployed, register your enclave's publi
 sh script/register_enclave.sh \
     <PACKAGE_ID> \
     <REGISTRY_ID> \
-    <ENCLAVE_IP>
+    <ENCLAVE_IP> \
+    [ATTESTATION_PORT]  # defaults to 1301
 ```
 
 This fetches the attestation from the enclave, verifies it on-chain, and stores the public key + PCR values in the shared registry.
@@ -121,10 +122,10 @@ sui client call \
 
 **Step 4: Update prices**
 ```bash
-sh script/update_price.sh <ENCLAVE_IP> <PACKAGE_ID> <ORACLE_ID> <REGISTRY_ID>
+sh script/update_price.sh <ENCLAVE_IP> <PACKAGE_ID> <ORACLE_ID> <REGISTRY_ID> [APP_PORT]
 ```
 
-Done! Your oracle is now ready to accept price updates from enclaves whose PCRs match the expected values.
+`APP_PORT` defaults to 3000. Your oracle is now ready to accept price updates from enclaves whose PCRs match the expected values.
 
 ## Usage Example
 
@@ -151,12 +152,12 @@ Example response:
 Use the provided script to fetch the price from the enclave and submit it on-chain:
 
 ```bash
-sh script/update_price.sh <ENCLAVE_IP> <PACKAGE_ID> <ORACLE_ID> <REGISTRY_ID>
+sh script/update_price.sh <ENCLAVE_IP> <PACKAGE_ID> <ORACLE_ID> <REGISTRY_ID> [APP_PORT]
 ```
 
 The script will:
-1. Fetch the enclave's public key from `http://<ENCLAVE_IP>:3000/public-key`
-2. Fetch the signed price from `http://<ENCLAVE_IP>:3000/price`
+1. Fetch the enclave's public key from `http://<ENCLAVE_IP>:<APP_PORT>/public-key`
+2. Fetch the signed price from `http://<ENCLAVE_IP>:<APP_PORT>/price`
 3. Convert the public key and signature to the proper format
 4. Submit the transaction on-chain
 

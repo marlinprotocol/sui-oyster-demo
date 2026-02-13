@@ -1,18 +1,21 @@
 #!/bin/bash
 
 # Script to fetch price from enclave and display it
-# Usage: ./get_price.sh <enclave_ip>
+# Usage: ./get_price.sh <enclave_ip> [app_port]
 
 set -e
 
 if [ -z "$1" ]; then
-    echo "Usage: $0 <enclave_ip>"
-    echo "Example: $0 192.168.1.100"
+    echo "Usage: $0 <enclave_ip> [app_port]"
+    echo "Example: $0 192.168.1.100 3000"
+    echo ""
+    echo "  app_port defaults to 3000 if not specified"
     exit 1
 fi
 
 ENCLAVE_IP="$1"
-ENCLAVE_URL="http://${ENCLAVE_IP}:3000"
+APP_PORT="${2:-3000}"
+ENCLAVE_URL="http://${ENCLAVE_IP}:${APP_PORT}"
 
 echo "Fetching price from enclave at $ENCLAVE_URL/price"
 
@@ -33,15 +36,15 @@ fi
 
 # Extract and display values
 PRICE=$(echo "$RESPONSE" | jq -r '.price')
-TIMESTAMP=$(echo "$RESPONSE" | jq -r '.timestamp')
+TIMESTAMP_MS=$(echo "$RESPONSE" | jq -r '.timestamp_ms')
 SIGNATURE=$(echo "$RESPONSE" | jq -r '.signature')
 
 echo ""
 echo "=== SUI Price Data ==="
 echo "Price (raw):  $PRICE"
 echo "Price (USD):  \$$(echo "scale=6; $PRICE / 1000000" | bc)"
-echo "Timestamp:    $TIMESTAMP"
-echo "Date:         $(date -r $(echo "$TIMESTAMP / 1000" | bc) '+%Y-%m-%d %H:%M:%S')"
+echo "Timestamp ms: $TIMESTAMP_MS"
+echo "Date:         $(date -r $(echo "$TIMESTAMP_MS / 1000" | bc) '+%Y-%m-%d %H:%M:%S')"
 echo "Signature:    ${SIGNATURE:0:20}...${SIGNATURE: -20}"
 echo ""
 echo "Full response:"

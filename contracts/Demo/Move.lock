@@ -67,10 +67,7 @@ id = "enclave_registry"
 source = { local = "../EnclaveRegistry" }
 
 dependencies = [
-  { id = "Bridge", name = "Bridge" },
-  { id = "MoveStdlib", name = "MoveStdlib" },
   { id = "Sui", name = "Sui" },
-  { id = "SuiSystem", name = "SuiSystem" },
 ]
 
 [move.toolchain-version]
@@ -81,5 +78,5 @@ flavor = "sui"
 [pinned.testnet.oyster_demo]
 source = { root = true }
 use_environment = "testnet"
-manifest_digest = "50E178D87698945ED703FC75251FD8BE213B847B1E45D473F19D1F48F6917A18"
-deps = { Sui = "Sui", enclave_registry = "enclave_registry" }
+manifest_digest = "D388428070A3B8C38A00FD8407460FF417717310504106451BBAB611549D76C1"
+deps = { enclave_registry = "enclave_registry", std = "MoveStdlib", sui = "Sui" }

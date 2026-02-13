@@ -1,13 +1,15 @@
 #!/bin/bash
 
 # Script to fetch price from enclave and update it on-chain
-# Usage: ./update_price.sh <enclave_ip> <package_id> <oracle_id> <registry_id>
+# Usage: ./update_price.sh <enclave_ip> <package_id> <oracle_id> <registry_id> [app_port]
 
 set -e
 
 if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ] || [ -z "$4" ]; then
-    echo "Usage: $0 <enclave_ip> <package_id> <oracle_id> <registry_id>"
-    echo "Example: $0 192.168.1.100 0x123... 0x456... 0x789..."
+    echo "Usage: $0 <enclave_ip> <package_id> <oracle_id> <registry_id> [app_port]"
+    echo "Example: $0 192.168.1.100 0x123... 0x456... 0x789... 3000"
+    echo ""
+    echo "  app_port defaults to 3000 if not specified"
     exit 1
 fi
 
@@ -15,8 +17,9 @@ ENCLAVE_IP="$1"
 PACKAGE_ID="$2"
 ORACLE_ID="$3"
 REGISTRY_ID="$4"
+APP_PORT="${5:-3000}"
 
-ENCLAVE_URL="http://${ENCLAVE_IP}:3000"
+ENCLAVE_URL="http://${ENCLAVE_IP}:${APP_PORT}"
 
 echo "Fetching public key from enclave at $ENCLAVE_URL/public-key"
 

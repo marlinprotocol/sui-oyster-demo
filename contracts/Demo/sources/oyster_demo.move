@@ -2,6 +2,11 @@
 /// A price oracle that uses the enclave registry to look up registered public keys
 /// and their PCR values. Demonstrates how applications can consume the enclave
 /// registry and implement their own signature verification and trust logic.
+///
+/// NOTE: This demo application uses secp256k1 signatures only. While the enclave
+/// registry supports both secp256k1 and x25519 keys, signature scheme selection is
+/// an application-level concern. Applications using x25519 would substitute their
+/// own verification logic (e.g. ed25519 or Diffie-Hellman key agreement).
 module oyster_demo::oyster_demo;
 
 use std::bcs;
