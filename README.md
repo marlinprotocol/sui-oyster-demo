@@ -5,8 +5,8 @@ A decentralized price oracle for SUI token that uses AWS Nitro Enclaves (via Oys
 ## Overview
 
 This project demonstrates how to build a secure price oracle using:
-- **Enclave Key Registry** (`enclave_registry.move`): A shared on-chain registry that maps verified enclave public keys (secp256k1 and x25519) to their PCR values. It is application-independent and can be used by any application. Deployed as a separate package.
-- **Price Oracle** (`oyster_demo.move`): An application that consumes the registry to verify enclave signatures, check PCRs, and store SUI token prices on-chain. Deployed as a separate package that depends on the registry.
+- **Enclave Key Registry** (`enclave_registry.move`): A shared on-chain registry that maps verified enclave public keys (secp256k1 and x25519) to their PCR values. It is application-independent and already deployed on-chain — you do not deploy it yourself.
+- **Price Oracle** (`oyster_demo.move`): An application that consumes the registry to verify enclave signatures, check PCRs, and store SUI token prices on-chain. Deployed as a separate package that automatically links to the pre-deployed registry (via `published-at` in `EnclaveRegistry/Move.toml`).
 - **AWS Nitro Enclaves**: Hardware-isolated execution via Oyster deployment
 - **secp256k1 Signatures**: Cryptographic proof that prices come from authorized enclaves
 - **PCR Attestation**: Verifies the exact enclave code running
@@ -42,8 +42,8 @@ This project demonstrates how to build a secure price oracle using:
 ```
 
 **Flow:**
-1. Enclave registers in the shared registry (attestation verified, public key + PCRs stored)
-2. Application contract is deployed with expected PCR values
+1. Enclave registers in the pre-deployed shared registry (attestation verified, public key + PCRs stored)
+2. Application contract is published (automatically links to existing registry, not re-deployed)
 3. Enclave fetches SUI price from CoinGecko and signs it with secp256k1
 4. Anyone submits signed price to Sui blockchain
 5. Application contract looks up the enclave's PCRs from the registry, checks they match expected values, and verifies the signature
@@ -54,7 +54,7 @@ This project demonstrates how to build a secure price oracle using:
 ```
 .
 ├── contracts/              # Sui Move smart contracts
-│   ├── EnclaveRegistry/       # Enclave key registry package (generic)
+│   ├── EnclaveRegistry/       # Enclave key registry package (pre-deployed, used as dependency)
 │   │   ├── Move.toml
 │   │   └── sources/
 │   │       └── enclave_registry.move
@@ -133,7 +133,13 @@ See the language-specific READMEs for deployment details.
 
 ### Step 2: Register Enclave in Registry
 
-The enclave registry (`enclave_registry.move`) is a shared, application-independent contract that stores verified (public_key -> PCRs) mappings. Assuming the registry is already deployed, register your enclave:
+The enclave registry is a shared, application-independent contract already deployed on-chain. You do not need to deploy it — when you publish the Demo package in the next step, it automatically links to the existing registry via the `published-at` field in `EnclaveRegistry/Move.toml`.
+
+| Network | Registry Package | Registry Object |
+|---------|-----------------|----------------|
+| Testnet | `0x05cd5a306375c49727fc2f1e667df8bcc1f5b52ad07e850074d330afda932761` | `0x7ebc3f9bc7a0cf0820d241ad767036483b885bbd62636fb9446bb0d99d2ed091` |
+
+Register your enclave in the existing registry:
 
 ```bash
 # Register enclave (verifies attestation, stores public key + PCRs in registry)
@@ -222,14 +228,14 @@ If both imageId values match, you have cryptographic proof that the deployed enc
 
 ### Step 3: Deploy Application Contract
 
-With the enclave registered in the registry, deploy the application contract that will consume the registry data.
+With the enclave registered, publish the Demo application. Only the Demo package is published — the registry dependency is resolved to the existing on-chain package automatically.
 
 ```bash
 cd contracts/Demo
 
-# Build and publish
+# Build and publish (only publishes Demo, not the registry)
 sui move build
-sui client publish
+sui client publish --gas-budget 100000000
 
 # Save these IDs from transaction output:
 # - DEMO_PACKAGE_ID (in Published Objects)
@@ -353,8 +359,8 @@ An application that uses the registry to verify and store prices.
 ### Integration Test
 ```bash
 # 1. Deploy enclave
-# 2. Register enclave in registry
-# 3. Deploy application contract
+# 2. Register enclave in registry (pre-deployed, no registry deployment needed)
+# 3. Deploy Demo application (automatically links to existing registry)
 # 4. Set registry on oracle
 # 5. Update expected PCRs on oracle
 # 6. Fetch and submit price

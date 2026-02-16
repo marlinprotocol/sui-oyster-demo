@@ -1,8 +1,8 @@
 [testnet]
-enclave_registry_package_id = "0x8c85df70f6bf50107bbb6e5f669ad9d8077de18bae160b6b45f328d4970dc9fb" # enclave_registry package
-oyster_demo_package_id = "0x0" # oyster_demo package
-Registry = "0x2e383f908c48c70bd1d6945e49a708a0a6bf1a74805e88950969578340d85e6c" # shared object from enclave_registry::init
-PriceOracle = "0x0" # shared object from oyster_demo::init
-AdminCap = "0x0" # owned by deployer, for updating expected PCRs
-UpgradeCap_registry = "0x217b7a5e647c880614c0147057a5f42570e2837484c1fd3dbc1fbcbec5536c2a"
+enclave_registry_package_id = "0x05cd5a306375c49727fc2f1e667df8bcc1f5b52ad07e850074d330afda932761" # pre-deployed, referenced via published-at in EnclaveRegistry/Move.toml
+oyster_demo_package_id = "0x0" # oyster_demo package (published by you)
+Registry = "0x7ebc3f9bc7a0cf0820d241ad767036483b885bbd62636fb9446bb0d99d2ed091" # pre-deployed shared object from enclave_registry::init
+PriceOracle = "0x0" # shared object from oyster_demo::init (created on your publish)
+AdminCap = "0x0" # owned by deployer, for updating expected PCRs (created on your publish)
+UpgradeCap_registry = "0x1b867205d83b5b04685c7d60f43461c2338057d683f10b6fe8a4fc5f3b6160d0"
 rpc_url = "https://fullnode.testnet.sui.io:443"

@@ -6,7 +6,13 @@ A Move smart contract that uses a shared enclave key registry for looking up ver
 
 ### Enclave Key Registry (`enclave_registry.move`)
 
-A generic, application-independent shared registry that stores verified enclave public keys and their PCR values. It is a pure data store -- applications consume registry data however they see fit (e.g. verify signatures, check PCRs, gate access). Deployed as its own package and is a shared registry any enclave can register with (`EnclaveRegistry/`).
+A generic, application-independent shared registry that stores verified enclave public keys and their PCR values. It is a pure data store — applications consume registry data however they see fit (e.g. verify signatures, check PCRs, gate access).
+
+**The registry is already deployed on-chain as a shared package.** You do not need to deploy it yourself. When you publish the Demo package, the Sui build system automatically links to the existing on-chain registry via the `published-at` field in `EnclaveRegistry/Move.toml` — only the Demo package is published.
+
+| Network | Registry Package | Registry Object |
+|---------|-----------------|----------------|
+| Testnet | `0x05cd5a306375c49727fc2f1e667df8bcc1f5b52ad07e850074d330afda932761` | `0x7ebc3f9bc7a0cf0820d241ad767036483b885bbd62636fb9446bb0d99d2ed091` |
 
 - **`Registry`**: Shared object containing a `Table<vector<u8>, Pcrs>` mapping public keys to their PCR values. Supports secp256k1 (stored as 33-byte compressed) and x25519 (stored as 32-byte raw) keys
 - **`register_enclave`**: Verifies a NitroAttestationDocument and stores the public key + PCRs in the registry
@@ -16,7 +22,7 @@ A generic, application-independent shared registry that stores verified enclave 
 
 ### Price Oracle (`oyster_demo.move`)
 
-A demo application that consumes the enclave registry. It implements its own trust logic. Deployed as its own package (`Demo/`) that depends on `EnclaveRegistry/`. This module is specific to the application and contains:
+A demo application that consumes the enclave registry. It implements its own trust logic. Deployed as its own package (`Demo/`) that depends on the pre-deployed `EnclaveRegistry` package. This module is specific to the application and contains:
 - Looks up an enclave's PCRs from the registry
 - Checks that the PCRs match the oracle's expected values
 - Verifies secp256k1 signatures over price payloads
@@ -85,9 +91,11 @@ let timestamp = get_latest_timestamp(&oracle);
 
 ### Deployment Steps
 
+The enclave registry is already deployed on-chain. You only need to publish the Demo package — it automatically links to the existing registry via `published-at` in `EnclaveRegistry/Move.toml`.
+
 **Step 1: Register your enclave in the registry**
 
-Assuming the enclave registry is already deployed, register your enclave's public key and PCR values:
+Register your enclave's public key and PCR values in the pre-deployed registry:
 
 ```bash
 sh script/register_enclave.sh \
@@ -103,12 +111,12 @@ This fetches the attestation from the enclave, verifies it on-chain, and stores 
 ```bash
 cd Demo
 sui move build
-sui client publish --gas-budget 100000000 --with-unpublished-dependencies
+sui client publish --gas-budget 100000000
 ```
 
-This automatically creates (via `init` functions):
-- **PriceOracle** (shared) - from the oyster_demo module
-- **AdminCap** (owned by deployer) - for updating expected PCRs
+Since the enclave registry is already published, only the Demo package is deployed. This creates (via `init` functions):
+- **PriceOracle** (shared) — from the oyster_demo module
+- **AdminCap** (owned by deployer) — for updating expected PCRs
 
 Save these IDs from the transaction output:
 - **Package ID** (`<DEMO_PACKAGE_ID>`): `0x...`
