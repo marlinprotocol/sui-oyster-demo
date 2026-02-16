@@ -34,11 +34,10 @@ The main oracle object that stores all price data:
 - `latest_price: u64` - The most recent price
 - `latest_timestamp: u64` - When the latest price was recorded
 - `expected_pcrs: Pcrs` - Expected PCR values for trusted enclaves
-- `registry_id: ID` - Pinned registry object ID (set by admin)
 - `pcrs_initialized: bool` - Whether PCRs have been explicitly configured
 
 #### `AdminCap`
-Capability for the deployer to configure the registry, update expected PCR values.
+Capability for the deployer to update expected PCR values.
 
 ### Key Functions
 
@@ -56,9 +55,9 @@ public fun update_sui_price(
 ```
 
 The function:
-1. Checks the oracle is fully configured (PCRs initialized, registry pinned)
+1. Checks the oracle is fully configured (PCRs initialized)
 2. Validates freshness via the on-chain clock (max 1 hour staleness)
-3. Looks up the enclave's PCRs from the pinned registry
+3. Looks up the enclave's PCRs from the registry
 4. Checks the PCRs match the oracle's expected values
 5. Verifies the secp256k1 signature over the price payload
 6. Stores the price at the timestamp
@@ -123,20 +122,7 @@ Save these IDs from the transaction output:
 - **PriceOracle Object ID**: `0x...` (shared object)
 - **AdminCap Object ID**: `0x...` (owned by deployer)
 
-**Step 3: Set the trusted registry**
-
-Pin the enclave registry to the oracle so only lookups from this specific registry are accepted:
-
-```bash
-sui client call \
-    --package <DEMO_PACKAGE_ID> \
-    --module oyster_demo \
-    --function set_registry \
-    --args <ORACLE_ID> <ADMIN_CAP_ID> <REGISTRY_ID> \
-    --gas-budget 10000000
-```
-
-**Step 4: Update expected PCRs (after building your enclave)**
+**Step 3: Update expected PCRs (after building your enclave)**
 ```bash
 sui client call \
     --package <DEMO_PACKAGE_ID> \
@@ -146,7 +132,7 @@ sui client call \
     --gas-budget 10000000
 ```
 
-**Step 5: Update prices**
+**Step 4: Update prices**
 ```bash
 sh script/update_price.sh <ENCLAVE_IP> <DEMO_PACKAGE_ID> <ORACLE_ID> <REGISTRY_ID> [APP_PORT]
 ```
@@ -224,9 +210,8 @@ This means:
 - `ENoPriceAtTimestamp (1)`: No price exists at the requested timestamp
 - `ENoPriceAvailable (2)`: The oracle has no prices yet (latest price query on empty oracle)
 - `EInvalidPCRs (3)`: The enclave's PCR values don't match the oracle's expected values
-- `EInvalidRegistry (4)`: The passed registry doesn't match the oracle's pinned registry
-- `EPcrsNotInitialized (5)`: The admin has not yet configured expected PCR values
-- `EStalePrice (6)`: The price timestamp is too old (more than 1 hour) or in the future
+- `EPcrsNotInitialized (4)`: The admin has not yet configured expected PCR values
+- `EStalePrice (5)`: The price timestamp is too old (more than 1 hour) or in the future
 
 ## Events
 
@@ -256,15 +241,6 @@ public struct PcrsUpdated has copy, drop {
     pcr1: vector<u8>,
     pcr2: vector<u8>,
     pcr16: vector<u8>,
-}
-```
-
-### `RegistryUpdated`
-Emitted when the admin sets or changes the trusted registry:
-```move
-public struct RegistryUpdated has copy, drop {
-    oracle_id: ID,
-    registry_id: ID,
 }
 ```
 

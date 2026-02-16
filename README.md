@@ -245,20 +245,7 @@ sui client publish --gas-budget 100000000
 
 See [contracts/README.md](contracts/README.md) for detailed instructions.
 
-### Step 4: Set Registry
-
-Pin the enclave registry to the oracle so only lookups from this specific registry are accepted:
-
-```bash
-sui client call \
-  --package <DEMO_PACKAGE_ID> \
-  --module oyster_demo \
-  --function set_registry \
-  --args <ORACLE_ID> <ADMIN_CAP_ID> <REGISTRY_ID> \
-  --gas-budget 10000000
-```
-
-### Step 5: Update Expected PCRs
+### Step 4: Update Expected PCRs
 
 Configure the oracle with the PCR values of the enclave you trust.
 
@@ -275,7 +262,7 @@ sui client call \
   --gas-budget 10000000
 ```
 
-### Step 6: Update Prices
+### Step 5: Update Prices
 
 ```bash
 # One-time update (app_port defaults to 3000)
@@ -348,8 +335,7 @@ An application that uses the registry to verify and store prices.
 | Function | Access | Description |
 |----------|--------|-------------|
 | `update_expected_pcrs()` | Entry (admin) | Update the oracle's expected PCR values |
-| `set_registry()` | Entry (admin) | Pin a trusted registry to the oracle |
-| `update_sui_price()` | Public | Verify signature, check PCRs from pinned registry, and update price |
+| `update_sui_price()` | Public | Verify signature, check PCRs from registry, and update price |
 | `get_latest_price()` | Public | Get most recent price and timestamp |
 | `get_price_at_timestamp()` | Public | Get historical price |
 | `has_price_at_timestamp()` | Public | Check if price exists |
@@ -361,9 +347,8 @@ An application that uses the registry to verify and store prices.
 # 1. Deploy enclave
 # 2. Register enclave in registry (pre-deployed, no registry deployment needed)
 # 3. Deploy Demo application (automatically links to existing registry)
-# 4. Set registry on oracle
-# 5. Update expected PCRs on oracle
-# 6. Fetch and submit price
+# 4. Update expected PCRs on oracle
+# 5. Fetch and submit price
 sh contracts/script/update_price.sh <PUBLIC_IP> <DEMO_PACKAGE_ID> <ORACLE_ID> <REGISTRY_ID> [APP_PORT]
 ```
 

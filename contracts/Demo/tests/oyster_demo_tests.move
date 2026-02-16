@@ -75,33 +75,6 @@ fun test_get_latest_price_reverts_when_empty() {
 }
 
 #[test]
-fun test_set_registry() {
-    let mut scenario = ts::begin(ADMIN);
-
-    ts::next_tx(&mut scenario, ADMIN);
-    {
-        oyster_demo::init_for_testing(ts::ctx(&mut scenario));
-        enclave_registry::init_for_testing(ts::ctx(&mut scenario));
-    };
-
-    // Admin sets the registry
-    ts::next_tx(&mut scenario, ADMIN);
-    {
-        let mut oracle = ts::take_shared<oyster_demo::PriceOracle>(&scenario);
-        let cap = ts::take_from_sender<oyster_demo::AdminCap>(&scenario);
-        let registry = ts::take_shared<enclave_registry::Registry>(&scenario);
-
-        oyster_demo::set_registry_for_testing(&mut oracle, &cap, &registry);
-
-        ts::return_shared(oracle);
-        ts::return_to_sender(&scenario, cap);
-        ts::return_shared(registry);
-    };
-
-    ts::end(scenario);
-}
-
-#[test]
 fun test_update_expected_pcrs() {
     let mut scenario = ts::begin(ADMIN);
 

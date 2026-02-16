@@ -3,6 +3,10 @@
 /// and their PCR values. Demonstrates how applications can consume the enclave
 /// registry and implement their own signature verification and trust logic.
 ///
+/// The enclave registry is a pre-deployed on-chain package. This module links to it
+/// at publish time via `published-at` in `EnclaveRegistry/Move.toml` — the Sui type
+/// system guarantees that only the correct `Registry` object can be passed at runtime.
+///
 /// NOTE: This demo application uses secp256k1 signatures only. While the enclave
 /// registry supports both secp256k1 and x25519 keys, signature scheme selection is
 /// an application-level concern.
@@ -21,9 +25,8 @@ const EInvalidSignature: u64 = 0;
 const ENoPriceAtTimestamp: u64 = 1;
 const ENoPriceAvailable: u64 = 2;
 const EInvalidPCRs: u64 = 3;
-const EInvalidRegistry: u64 = 4;
-const EPcrsNotInitialized: u64 = 5;
-const EStalePrice: u64 = 6;
+const EPcrsNotInitialized: u64 = 4;
+const EStalePrice: u64 = 5;
 
 /// Maximum allowed age for a price update (1 hour in milliseconds)
 const MAX_PRICE_AGE_MS: u64 = 3_600_000;
@@ -43,8 +46,6 @@ public struct PriceOracle has key {
     latest_timestamp: u64,
     /// Expected PCR values - only enclaves with matching PCRs can update prices
     expected_pcrs: Pcrs,
-    /// Pinned registry ID - only this registry is trusted for lookups
-    registry_id: ID,
     /// Whether the admin has explicitly configured PCR values
     pcrs_initialized: bool,
 }
@@ -81,14 +82,9 @@ public struct PcrsUpdated has copy, drop {
     pcr16: vector<u8>,
 }
 
-public struct RegistryUpdated has copy, drop {
-    oracle_id: ID,
-    registry_id: ID,
-}
-
 /// Module initializer - creates the oracle and admin capability.
-/// The admin must call set_registry and update_expected_pcrs before the
-/// oracle can accept price updates.
+/// The admin must call update_expected_pcrs before the oracle can accept
+/// price updates.
 fun init(ctx: &mut TxContext) {
     let oracle = PriceOracle {
         id: object::new(ctx),
@@ -102,8 +98,6 @@ fun init(ctx: &mut TxContext) {
             x"000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
             x"000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
         ),
-        // Sentinel value - admin must call set_registry before use
-        registry_id: object::id_from_address(@0x0),
         pcrs_initialized: false,
     };
 
@@ -115,21 +109,6 @@ fun init(ctx: &mut TxContext) {
 
     let cap = AdminCap { id: object::new(ctx) };
     transfer::transfer(cap, ctx.sender());
-}
-
-/// Set the trusted registry for this oracle.
-/// Only the admin (holder of AdminCap) can call this.
-/// Must be called before prices can be updated.
-entry fun set_registry(
-    oracle: &mut PriceOracle,
-    _cap: &AdminCap,
-    registry: &Registry,
-) {
-    oracle.registry_id = object::id(registry);
-    event::emit(RegistryUpdated {
-        oracle_id: object::id(oracle),
-        registry_id: object::id(registry),
-    });
 }
 
 /// Update the expected PCR values for the oracle.
@@ -152,7 +131,7 @@ entry fun update_expected_pcrs(
 }
 
 /// Update SUI price.
-/// Looks up the enclave's PCRs from the pinned registry, verifies they match the
+/// Looks up the enclave's PCRs from the registry, verifies they match the
 /// oracle's expected values, checks freshness via the on-chain clock, then verifies
 /// the secp256k1 signature over the price payload.
 /// Public (not entry) to allow composability with other Move modules.
@@ -167,7 +146,6 @@ public fun update_sui_price(
 ) {
     // Ensure oracle is fully configured
     assert!(oracle.pcrs_initialized, EPcrsNotInitialized);
-    assert!(object::id(registry) == oracle.registry_id, EInvalidRegistry);
 
     // Staleness check: price must not be older than MAX_PRICE_AGE_MS
     let current_time = clock::timestamp_ms(clock);
@@ -231,15 +209,6 @@ public fun init_for_testing(ctx: &mut TxContext) {
 }
 
 #[test_only]
-public fun set_registry_for_testing(
-    oracle: &mut PriceOracle,
-    cap: &AdminCap,
-    registry: &Registry,
-) {
-    set_registry(oracle, cap, registry);
-}
-
-#[test_only]
 public fun update_expected_pcrs_for_testing(
     oracle: &mut PriceOracle,
     cap: &AdminCap,
@@ -259,7 +228,6 @@ public fun destroy_oracle_for_testing(oracle: PriceOracle) {
         latest_price: _,
         latest_timestamp: _,
         expected_pcrs: _,
-        registry_id: _,
         pcrs_initialized: _,
     } = oracle;
     table::drop(prices);
