@@ -21,8 +21,109 @@ fun test_oracle_creation() {
     ts::next_tx(&mut scenario, ADMIN);
     {
         let oracle = ts::take_shared<oyster_demo::PriceOracle>(&scenario);
-        assert!(oyster_demo::get_latest_timestamp(&oracle) == 0);
+        // Oracle exists as shared object - creation successful
         ts::return_shared(oracle);
+
+        // AdminCap transferred to deployer
+        let cap = ts::take_from_sender<oyster_demo::AdminCap>(&scenario);
+        ts::return_to_sender(&scenario, cap);
+    };
+
+    ts::end(scenario);
+}
+
+#[test]
+#[expected_failure]
+fun test_get_latest_timestamp_reverts_when_empty() {
+    let mut scenario = ts::begin(ADMIN);
+
+    ts::next_tx(&mut scenario, ADMIN);
+    {
+        oyster_demo::init_for_testing(ts::ctx(&mut scenario));
+    };
+
+    ts::next_tx(&mut scenario, ADMIN);
+    {
+        let oracle = ts::take_shared<oyster_demo::PriceOracle>(&scenario);
+        // Should revert with ENoPriceAvailable since no prices have been submitted
+        let _ = oyster_demo::get_latest_timestamp(&oracle);
+        ts::return_shared(oracle);
+    };
+
+    ts::end(scenario);
+}
+
+#[test]
+#[expected_failure]
+fun test_get_latest_price_reverts_when_empty() {
+    let mut scenario = ts::begin(ADMIN);
+
+    ts::next_tx(&mut scenario, ADMIN);
+    {
+        oyster_demo::init_for_testing(ts::ctx(&mut scenario));
+    };
+
+    ts::next_tx(&mut scenario, ADMIN);
+    {
+        let oracle = ts::take_shared<oyster_demo::PriceOracle>(&scenario);
+        // Should revert with ENoPriceAvailable
+        let (_, _) = oyster_demo::get_latest_price(&oracle);
+        ts::return_shared(oracle);
+    };
+
+    ts::end(scenario);
+}
+
+#[test]
+fun test_set_registry() {
+    let mut scenario = ts::begin(ADMIN);
+
+    ts::next_tx(&mut scenario, ADMIN);
+    {
+        oyster_demo::init_for_testing(ts::ctx(&mut scenario));
+        enclave_registry::init_for_testing(ts::ctx(&mut scenario));
+    };
+
+    // Admin sets the registry
+    ts::next_tx(&mut scenario, ADMIN);
+    {
+        let mut oracle = ts::take_shared<oyster_demo::PriceOracle>(&scenario);
+        let cap = ts::take_from_sender<oyster_demo::AdminCap>(&scenario);
+        let registry = ts::take_shared<enclave_registry::Registry>(&scenario);
+
+        oyster_demo::set_registry_for_testing(&mut oracle, &cap, &registry);
+
+        ts::return_shared(oracle);
+        ts::return_to_sender(&scenario, cap);
+        ts::return_shared(registry);
+    };
+
+    ts::end(scenario);
+}
+
+#[test]
+fun test_update_expected_pcrs() {
+    let mut scenario = ts::begin(ADMIN);
+
+    ts::next_tx(&mut scenario, ADMIN);
+    {
+        oyster_demo::init_for_testing(ts::ctx(&mut scenario));
+    };
+
+    // Admin updates PCRs
+    ts::next_tx(&mut scenario, ADMIN);
+    {
+        let mut oracle = ts::take_shared<oyster_demo::PriceOracle>(&scenario);
+        let cap = ts::take_from_sender<oyster_demo::AdminCap>(&scenario);
+
+        oyster_demo::update_expected_pcrs_for_testing(
+            &mut oracle,
+            &cap,
+            x"aa", x"bb", x"cc", x"dd",
+        );
+
+        ts::return_shared(oracle);
+        ts::return_to_sender(&scenario, cap);
     };
 
     ts::end(scenario);

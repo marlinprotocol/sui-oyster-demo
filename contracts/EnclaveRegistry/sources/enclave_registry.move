@@ -128,7 +128,17 @@ public fun pcr_16(pcrs: &Pcrs): &vector<u8> { &pcrs.3 }
 
 fun load_pk(document: &NitroAttestationDocument): vector<u8> {
     assert!(document.public_key().is_some(), ENoPublicKey);
-    let mut pk = (*document.public_key()).destroy_some();
+    let pk = (*document.public_key()).destroy_some();
+    normalize_pk(pk)
+}
+
+/// Normalize a raw public key to its canonical storage format.
+/// - 65-byte (0x04 + X + Y): strips prefix, compresses to 33 bytes
+/// - 64-byte (X + Y):        compresses to 33 bytes
+/// - 33-byte (0x02/0x03 + X): validates prefix, returned as-is
+/// - 32-byte (x25519 raw):   returned as-is
+/// - Any other length:        aborts with EInvalidPublicKeyLength
+fun normalize_pk(mut pk: vector<u8>): vector<u8> {
 
     // If 65-byte uncompressed (0x04 prefix + 64 bytes), strip the prefix
     if (pk.length() == SECP256K1_PK_LENGTH_UNCOMPRESSED_WITH_PREFIX) {
@@ -213,4 +223,33 @@ fun to_pcrs(document: &NitroAttestationDocument): Pcrs {
 #[test_only]
 public fun init_for_testing(ctx: &mut TxContext) {
     init(ENCLAVE_REGISTRY {}, ctx);
+}
+
+#[test_only]
+public fun compress_secp256k1_pubkey_for_testing(uncompressed: &vector<u8>): vector<u8> {
+    compress_secp256k1_pubkey(uncompressed)
+}
+
+#[test_only]
+public fun normalize_pk_for_testing(pk: vector<u8>): vector<u8> {
+    normalize_pk(pk)
+}
+
+#[test_only]
+/// Directly insert a key-PCR pair into the registry, bypassing attestation.
+/// Useful for testing application code that depends on a populated registry.
+public fun register_for_testing(
+    registry: &mut Registry,
+    pk: vector<u8>,
+    pcrs: Pcrs,
+) {
+    assert!(!table::contains(&registry.enclaves, pk), EAlreadyRegistered);
+    table::add(&mut registry.enclaves, pk, pcrs);
+}
+
+#[test_only]
+public fun destroy_registry_for_testing(registry: Registry) {
+    let Registry { id, enclaves } = registry;
+    table::drop(enclaves);
+    object::delete(id);
 }

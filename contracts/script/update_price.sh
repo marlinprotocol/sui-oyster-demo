@@ -83,7 +83,7 @@ sui client call \
     --package "$DEMO_PACKAGE_ID" \
     --module oyster_demo \
     --function update_sui_price \
-    --args "$ORACLE_ID" "$REGISTRY_ID" "$PK_VECTOR" "$PRICE" "$TIMESTAMP_MS" "$SIG_VECTOR" \
+    --args "$ORACLE_ID" "$REGISTRY_ID" "0x6" "$PK_VECTOR" "$PRICE" "$TIMESTAMP_MS" "$SIG_VECTOR" \
     --gas-budget 10000000
 
 echo ""
