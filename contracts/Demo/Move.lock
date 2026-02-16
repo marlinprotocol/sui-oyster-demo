@@ -80,3 +80,11 @@ source = { root = true }
 use_environment = "testnet"
 manifest_digest = "D388428070A3B8C38A00FD8407460FF417717310504106451BBAB611549D76C1"
 deps = { enclave_registry = "enclave_registry", std = "MoveStdlib", sui = "Sui" }
+
+[env]
+
+[env.testnet]
+chain-id = "4c78adac"
+original-published-id = "0x35d31bf725ee282cd9563fd93addff4bc5cdb33cbde0decac2520f21cdc9613d"
+latest-published-id = "0x35d31bf725ee282cd9563fd93addff4bc5cdb33cbde0decac2520f21cdc9613d"
+published-version = "1"
