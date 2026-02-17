@@ -1,5 +1,9 @@
 # SUI Token Price Oracle with Enclave Key Registry
 
+> ⚠️ **WARNING: UNAUDITED CODE - EXPERIMENTAL USE ONLY**
+>
+> This code has NOT been audited by security professionals and may contain vulnerabilities or bugs. It is provided for experimental and educational purposes only. DO NOT use this in production environments or with real assets. Use at your own risk.
+
 A Move smart contract that uses a shared enclave key registry for looking up verified enclave public keys and their PCR values, then applies application-specific trust logic (signature verification, PCR matching) to store SUI token prices on-chain.
 
 ## Architecture

@@ -1,5 +1,9 @@
 # SUI Price Oracle with Oyster Enclaves
 
+> ⚠️ **WARNING: UNAUDITED CODE - EXPERIMENTAL USE ONLY**
+>
+> This code has NOT been audited by security professionals and may contain vulnerabilities or bugs. It is provided for experimental and educational purposes only. DO NOT use this in production environments or with real assets. Use at your own risk.
+
 A decentralized price oracle for SUI token that uses AWS Nitro Enclaves (via Oyster) for secure, verifiable price feeds on Sui contracts. The oracle fetches prices from CoinGecko and signs them with secp256k1, enabling trustless on-chain verification.
 
 ## Overview

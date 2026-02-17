@@ -1,4 +1,11 @@
 /// Module: oyster_demo
+///
+/// ⚠️  WARNING: UNAUDITED CODE - EXPERIMENTAL USE ONLY
+/// This code has NOT been audited and may contain vulnerabilities or bugs.
+/// It is provided for experimental and educational purposes only.
+/// DO NOT use this in production environments or with real assets.
+/// Use at your own risk.
+///
 /// A price oracle that uses the enclave registry to look up registered public keys
 /// and their PCR values. Demonstrates how applications can consume the enclave
 /// registry and implement their own signature verification and trust logic.

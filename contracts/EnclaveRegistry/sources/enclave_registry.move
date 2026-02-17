@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // inspired from https://github.com/MystenLabs/nautilus/blob/f9615732335027bbb73b5624e164dd65bcf95bfa/move/enclave/sources/enclave.move
 
+// ⚠️  WARNING: UNAUDITED CODE - EXPERIMENTAL USE ONLY
+// This code has NOT been audited and may contain vulnerabilities or bugs. 
+// It is provided for experimental and educational purposes only. 
+// DO NOT use this in production environments or with real assets.
+// Use at your own risk.
+
 // A shared enclave key registry.
 // Stores verified (public_key -> PCR values) pairs after attestation verification.
 // Applications can query the registry to check if a public key is registered
