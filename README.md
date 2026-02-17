@@ -241,7 +241,7 @@ cd contracts/Demo
 
 # Build and publish (only publishes Demo, not the registry)
 sui move build
-sui client publish --gas-budget 100000000
+sui client publish
 
 # Save these IDs from transaction output:
 # - DEMO_PACKAGE_ID (in Published Objects)

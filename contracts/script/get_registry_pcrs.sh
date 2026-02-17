@@ -24,9 +24,10 @@ APP_PORT="${3:-3000}"
 # Auto-detect RPC URL from active sui client environment
 RPC_URL=$(sui client envs --json 2>/dev/null | python3 -c "
 import json, sys
-envs = json.load(sys.stdin)
-active = [e for e in envs if e.get('active', False)]
-print(active[0]['rpc'] if active else '')
+data = json.load(sys.stdin)
+envs, active_alias = data[0], data[1]
+match = [e['rpc'] for e in envs if e['alias'] == active_alias]
+print(match[0] if match else '')
 " 2>/dev/null)
 
 if [ -z "$RPC_URL" ]; then

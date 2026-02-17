@@ -115,7 +115,7 @@ This fetches the attestation from the enclave, verifies it on-chain, and stores 
 ```bash
 cd Demo
 sui move build
-sui client publish --gas-budget 100000000
+sui client publish
 ```
 
 Since the enclave registry is already published, only the Demo package is deployed. This creates (via `init` functions):
