@@ -147,8 +147,15 @@ The enclave registry is a shared, application-independent contract already deplo
 
 Register your enclave in the existing registry:
 
+**Mainnet:**
 ```bash
-# Register enclave (verifies attestation, stores public key + PCRs in registry)
+oyster-cvm register \
+  --enclave-ip <PUBLIC_IP> \
+  --wallet-priv-key <WALLET_PRIVATE_KEY>
+```
+
+**Testnet:**
+```bash
 sh contracts/script/register_enclave.sh \
   <REGISTRY_PACKAGE_ID> \
   <REGISTRY_ID> \

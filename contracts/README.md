@@ -101,6 +101,14 @@ The enclave registry is already deployed on-chain. You only need to publish the 
 
 Register your enclave's public key and PCR values in the pre-deployed registry:
 
+**Mainnet:**
+```bash
+oyster-cvm register \
+    --enclave-ip <ENCLAVE_IP> \
+    --wallet-priv-key <WALLET_PRIVATE_KEY>
+```
+
+**Testnet:**
 ```bash
 sh script/register_enclave.sh \
     <REGISTRY_PACKAGE_ID> \
