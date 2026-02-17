@@ -1,10 +1,20 @@
 [package]
 name = "enclave_registry"
 edition = "2024.beta"
-published-at = "0x05cd5a306375c49727fc2f1e667df8bcc1f5b52ad07e850074d330afda932761"
+
+# Network-specific deployment addresses
+# Uncomment the published-at line for the network you're targeting
+
+# Mainnet deployment
+published-at = "0x8df76b79118ffad2bacb55705c84474802ddb3d62199b98db720c5088e161ab8"
+
+# Testnet deployment (uncomment when deploying to testnet)
+# published-at = "0x05cd5a306375c49727fc2f1e667df8bcc1f5b52ad07e850074d330afda932761"
 
 [dependencies]
 Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "563c15820b27dec9cbe75f826a3b6243ef44da1a" }
 
 [addresses]
-enclave_registry = "0x05cd5a306375c49727fc2f1e667df8bcc1f5b52ad07e850074d330afda932761"
+# Must match the published-at address above
+enclave_registry = "0x8df76b79118ffad2bacb55705c84474802ddb3d62199b98db720c5088e161ab8"  # mainnet
+# enclave_registry = "0x05cd5a306375c49727fc2f1e667df8bcc1f5b52ad07e850074d330afda932761"  # testnet

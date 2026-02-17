@@ -71,7 +71,8 @@ This project demonstrates how to build a secure price oracle using:
 │   ├── script/            # Helper scripts for deployment
 │   │   ├── register_enclave.sh
 │   │   ├── update_price.sh
-│   │   └── get_price.sh
+│   │   ├── get_price.sh
+│   │   └── get_registry_pcrs.sh
 │   └── README.md          # Contract deployment guide
 │
 ├── enclave_rust/          # Rust enclave server
@@ -141,6 +142,7 @@ The enclave registry is a shared, application-independent contract already deplo
 
 | Network | Registry Package | Registry Object |
 |---------|-----------------|----------------|
+| Mainnet | `0x8df76b79118ffad2bacb55705c84474802ddb3d62199b98db720c5088e161ab8` | `0xf67a9392da1749e8442d71eb6139a9dc1c199b88ef3da49385eeda175246d9d0` |
 | Testnet | `0x05cd5a306375c49727fc2f1e667df8bcc1f5b52ad07e850074d330afda932761` | `0x7ebc3f9bc7a0cf0820d241ad767036483b885bbd62636fb9446bb0d99d2ed091` |
 
 Register your enclave in the existing registry:

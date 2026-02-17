@@ -1,3 +1,9 @@
+[mainnet]
+enclave_registry_package_id = "0x8df76b79118ffad2bacb55705c84474802ddb3d62199b98db720c5088e161ab8" # pre-deployed, referenced via published-at in EnclaveRegistry/Move.toml
+Registry = "0xf67a9392da1749e8442d71eb6139a9dc1c199b88ef3da49385eeda175246d9d0" # pre-deployed shared object from enclave_registry::init
+UpgradeCap_registry = "0xc96e5666fc5cf094045c1900a9e9bf75946e304b9593f61e74d0833ab126118e"
+rpc_url = "https://fullnode.mainnet.sui.io:443"
+
 [testnet]
 enclave_registry_package_id = "0x05cd5a306375c49727fc2f1e667df8bcc1f5b52ad07e850074d330afda932761" # pre-deployed, referenced via published-at in EnclaveRegistry/Move.toml
 oyster_demo_package_id = "0x35d31bf725ee282cd9563fd93addff4bc5cdb33cbde0decac2520f21cdc9613d" # oyster_demo package (published by you)

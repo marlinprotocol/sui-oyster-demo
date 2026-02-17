@@ -16,6 +16,7 @@ A generic, application-independent shared registry that stores verified enclave 
 
 | Network | Registry Package | Registry Object |
 |---------|-----------------|----------------|
+| Mainnet | `0x8df76b79118ffad2bacb55705c84474802ddb3d62199b98db720c5088e161ab8` | `0xf67a9392da1749e8442d71eb6139a9dc1c199b88ef3da49385eeda175246d9d0` |
 | Testnet | `0x05cd5a306375c49727fc2f1e667df8bcc1f5b52ad07e850074d330afda932761` | `0x7ebc3f9bc7a0cf0820d241ad767036483b885bbd62636fb9446bb0d99d2ed091` |
 
 - **`Registry`**: Shared object containing a `Table<vector<u8>, Pcrs>` mapping public keys to their PCR values. Supports secp256k1 (stored as 33-byte compressed) and x25519 (stored as 32-byte raw) keys

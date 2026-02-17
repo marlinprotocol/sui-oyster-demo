@@ -3,7 +3,8 @@
 # Look up an enclave's PCR values from the on-chain registry.
 # Fetches the enclave's public key, then queries the registry for its PCRs.
 #
-# Usage: ./get_pcrs.sh <registry_id> <enclave_ip> [app_port]
+# Usage: ./get_registry_pcrs.sh <registry_id> <enclave_ip> [app_port]
+# Uses the RPC URL from your active `sui client` environment.
 
 set -e
 
@@ -12,12 +13,28 @@ if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
     echo "Example: $0 0x7ebc... 100.26.111.45 3000"
     echo ""
     echo "  app_port defaults to 3000 if not specified"
+    echo "  RPC URL is auto-detected from your active sui client environment"
     exit 1
 fi
 
 REGISTRY_ID="$1"
 ENCLAVE_IP="$2"
 APP_PORT="${3:-3000}"
+
+# Auto-detect RPC URL from active sui client environment
+RPC_URL=$(sui client envs --json 2>/dev/null | python3 -c "
+import json, sys
+envs = json.load(sys.stdin)
+active = [e for e in envs if e.get('active', False)]
+print(active[0]['rpc'] if active else '')
+" 2>/dev/null)
+
+if [ -z "$RPC_URL" ]; then
+    echo "Error: Could not detect RPC URL from sui client. Is sui client configured?"
+    exit 1
+fi
+
+echo "Using RPC: $RPC_URL"
 
 ENCLAVE_URL="http://${ENCLAVE_IP}:${APP_PORT}"
 
@@ -39,7 +56,7 @@ echo "Public key: $PK_HEX (${#PK_HEX} hex chars = $(( ${#PK_HEX} / 2 )) bytes)"
 # We query the dynamic field where the key is the public key bytes.
 
 # Get the Registry object to find the table's inner ID
-REGISTRY_OBJ=$(curl -s -X POST "https://fullnode.testnet.sui.io:443" \
+REGISTRY_OBJ=$(curl -s -X POST "$RPC_URL" \
     -H "Content-Type: application/json" \
     -d "{
         \"jsonrpc\": \"2.0\",
@@ -68,7 +85,7 @@ PK_LEN_HEX=$(printf '%02x' $PK_BYTES_LEN)
 BCS_KEY="${PK_LEN_HEX}${PK_HEX}"
 
 # Query the dynamic field
-FIELD_RESULT=$(curl -s -X POST "https://fullnode.testnet.sui.io:443" \
+FIELD_RESULT=$(curl -s -X POST "$RPC_URL" \
     -H "Content-Type: application/json" \
     -d "{
         \"jsonrpc\": \"2.0\",
@@ -151,6 +168,7 @@ echo "PCR0:  $PCR0_HEX"
 echo "PCR1:  $PCR1_HEX"
 echo "PCR2:  $PCR2_HEX"
 echo "PCR16: $PCR16_HEX"
+echo ""
 echo ""
 echo "Use these values with update_expected_pcrs:"
 echo ""
