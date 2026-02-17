@@ -321,12 +321,19 @@ sh contracts/script/get_price.sh <PUBLIC_IP> [APP_PORT]
 
 ### Enclave Endpoints
 
+#### Application endpoints
+
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/health` | GET | Health check |
 | `/public-key` | GET | Get enclave's public key |
 | `/price` | GET | Get signed SUI price |
-| `:1301/attestation/hex` | GET | Get attestation document for registration |
+
+#### Enclave Attestation Endpoint
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `:1301/attestation/hex` | GET | Get attestation |
 
 ### Move Contract Functions
 
